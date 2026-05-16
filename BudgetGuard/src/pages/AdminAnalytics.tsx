@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import AdminDashboard from '../components/AdminDashboard'
 import {
+  getAdminDeploymentDiagnostics,
   getAdminLoginErrorMessage,
+  logAdminDeploymentDebug,
   resolveIsAdmin,
 } from '../utils/adminAccess'
 
@@ -27,7 +29,9 @@ export function AdminAnalytics() {
     }
 
     setIsAuthenticated(true)
-    setIsAdmin(await resolveIsAdmin(session.user))
+    const admin = await resolveIsAdmin(session.user)
+    setIsAdmin(admin)
+    logAdminDeploymentDebug('AdminAnalytics', session.user)
   }, [])
 
   useEffect(() => {
@@ -82,7 +86,9 @@ export function AdminAnalytics() {
 
       if (data.user) {
         setIsAuthenticated(true)
-        setIsAdmin(await resolveIsAdmin(data.user))
+        const admin = await resolveIsAdmin(data.user)
+        setIsAdmin(admin)
+        logAdminDeploymentDebug('AdminAnalytics.login', data.user)
       }
     } catch (err) {
       if (import.meta.env.DEV) {
@@ -169,9 +175,13 @@ export function AdminAnalytics() {
   }
 
   if (!isAdmin) {
+    const deployment = getAdminDeploymentDiagnostics()
+    const missingNetlifyEnv =
+      !deployment.adminEmailConfigured && !deployment.adminUserIdsConfigured
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4 dark:bg-gray-900">
-        <div className="rounded-lg bg-white p-8 shadow-lg dark:bg-gray-800">
+        <div className="max-w-lg rounded-lg bg-white p-8 shadow-lg dark:bg-gray-800">
           <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
           <p className="mt-4 text-gray-700 dark:text-gray-300">
             You must be an admin to access this page. Your email must match{' '}
@@ -179,6 +189,33 @@ export function AdminAnalytics() {
             your user must exist in <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">admin_users</code>,
             or your account must have the admin role.
           </p>
+          {missingNetlifyEnv ? (
+            <div
+              className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
+              role="status"
+            >
+              <p className="font-semibold">Deployment configuration</p>
+              <p className="mt-2">
+                This build has no <code>VITE_ADMIN_EMAIL</code> or{' '}
+                <code>VITE_ADMIN_USER_IDS</code> baked in. Vite only exposes env vars
+                that exist at <strong>build time</strong> on Netlify.
+              </p>
+              <ol className="mt-2 list-inside list-decimal space-y-1">
+                <li>Netlify → Site configuration → Environment variables</li>
+                <li>
+                  Add <code>VITE_ADMIN_EMAIL</code>,{' '}
+                  <code>VITE_ADMIN_USER_IDS</code>, <code>VITE_SUPABASE_URL</code>,{' '}
+                  <code>VITE_SUPABASE_ANON_KEY</code> (same values as local{' '}
+                  <code>.env.local</code>)
+                </li>
+                <li>Deploys → Trigger deploy → Clear cache and deploy site</li>
+              </ol>
+              <p className="mt-2 text-xs opacity-90">
+                Debug: open this page with <code>?admin_debug=1</code> and check the
+                browser console (no secrets logged).
+              </p>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={() => void handleLogout()}
