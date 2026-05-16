@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import AuthPage from './components/AuthPage'
+import { BadgeGallery } from './components/BadgeGallery'
+import { Celebration } from './components/Celebration'
 import { AdminAnalytics } from './pages/AdminAnalytics'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
@@ -26,6 +28,10 @@ const BADGE_ID_TO_SUPABASE: Record<string, string> = {
   'meal-prepper': 'meal_prepper',
   minimalist: 'minimalist',
 }
+
+const SUPABASE_TO_LOCAL_BADGE_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(BADGE_ID_TO_SUPABASE).map(([local, supabase]) => [supabase, local]),
+)
 
 function MoonIcon() {
   return (
@@ -95,6 +101,39 @@ function BudgetGuardApp() {
 
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [celebrationBadgeName, setCelebrationBadgeName] = useState<string | null>(null)
+  const prevUnlockedBadgeIdsRef = useRef<string[]>([])
+
+  const earnedBadges = badges
+    .filter((b) => b.unlocked)
+    .map((b) => SUPABASE_TO_LOCAL_BADGE_ID[b.badge_id])
+    .filter((id): id is string => Boolean(id))
+
+  useEffect(() => {
+    const unlockedIds = badges.filter((b) => b.unlocked).map((b) => b.badge_id)
+    const newlyUnlocked = unlockedIds.filter(
+      (id) => !prevUnlockedBadgeIdsRef.current.includes(id),
+    )
+
+    if (newlyUnlocked.length > 0 && prevUnlockedBadgeIdsRef.current.length > 0) {
+      const badge = badges.find((b) => b.badge_id === newlyUnlocked[0])
+      if (badge) {
+        setCelebrationBadgeName(badge.name)
+      }
+    }
+
+    prevUnlockedBadgeIdsRef.current = unlockedIds
+  }, [badges])
+
+  useEffect(() => {
+    if (!celebrationBadgeName) return
+
+    const timer = window.setTimeout(() => {
+      setCelebrationBadgeName(null)
+    }, 3000)
+
+    return () => window.clearTimeout(timer)
+  }, [celebrationBadgeName])
 
   useEffect(() => {
     const saved = loadFromLocalStorage()
@@ -276,6 +315,9 @@ function BudgetGuardApp() {
         </header>
 
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
+          {celebrationBadgeName && (
+            <Celebration show={true} badgeName={celebrationBadgeName} />
+          )}
           <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
           <Dashboard
             userId={userId}
@@ -289,6 +331,9 @@ function BudgetGuardApp() {
             expenses={expenses}
             onDeleteExpense={handleDeleteExpense}
           />
+          <div className="mt-12">
+            <BadgeGallery earnedBadges={earnedBadges} />
+          </div>
         </main>
 
         <BudgetSettings
