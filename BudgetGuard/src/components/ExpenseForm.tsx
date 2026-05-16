@@ -37,7 +37,16 @@ const inputClassName =
 
 const labelClassName = 'mb-1.5 block text-sm font-medium text-gray-500'
 
-export function ExpenseForm() {
+interface ExpenseFormProps {
+  onAddExpense: (
+    amount: number,
+    category: string,
+    date: string,
+    notes: string,
+  ) => void
+}
+
+export function ExpenseForm({ onAddExpense }: ExpenseFormProps) {
   const [amount, setAmount] = useState(getInitialState().amount)
   const [category, setCategory] = useState<Category>(getInitialState().category)
   const [date, setDate] = useState(getInitialState().date)
@@ -61,7 +70,8 @@ export function ExpenseForm() {
       notes: notes.trim(),
     }
 
-    console.log(formData)
+    onAddExpense(formData.amount, formData.category, formData.date, formData.notes)
+    resetForm()
   }
 
   return (

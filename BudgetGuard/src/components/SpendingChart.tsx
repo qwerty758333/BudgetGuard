@@ -5,7 +5,6 @@ import {
   PieChart,
   ResponsiveContainer,
   Tooltip,
-  type TooltipProps,
 } from 'recharts'
 
 export interface SpendingChartDataItem {
@@ -33,15 +32,17 @@ function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
-function ChartTooltip({
-  active,
-  payload,
-}: TooltipProps<number, string>) {
+interface ChartTooltipProps {
+  active?: boolean
+  payload?: Array<{ payload: SpendingChartDataItem }>
+}
+
+function ChartTooltip({ active, payload }: ChartTooltipProps) {
   if (!active || !payload?.length) {
     return null
   }
 
-  const item = payload[0].payload as SpendingChartDataItem
+  const item = payload[0].payload
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-md">

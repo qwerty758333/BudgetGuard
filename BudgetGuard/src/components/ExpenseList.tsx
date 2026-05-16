@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import type { Expense } from '../App'
 
 const CATEGORIES = [
   'Food',
@@ -12,14 +12,6 @@ const CATEGORIES = [
 
 type Category = (typeof CATEGORIES)[number]
 
-export interface Expense {
-  id: string
-  category: Category
-  amount: number
-  date: string
-  notes: string
-}
-
 const CATEGORY_EMOJI: Record<Category, string> = {
   Food: '🍔',
   Entertainment: '🎬',
@@ -29,44 +21,6 @@ const CATEGORY_EMOJI: Record<Category, string> = {
   Healthcare: '🏥',
   Other: '📦',
 }
-
-const SAMPLE_EXPENSES: Expense[] = [
-  {
-    id: '1',
-    category: 'Food',
-    amount: 24.5,
-    date: '2026-05-15',
-    notes: 'Grocery run',
-  },
-  {
-    id: '2',
-    category: 'Transport',
-    amount: 45,
-    date: '2026-05-14',
-    notes: 'Uber to office',
-  },
-  {
-    id: '3',
-    category: 'Entertainment',
-    amount: 15.99,
-    date: '2026-05-13',
-    notes: 'Movie night',
-  },
-  {
-    id: '4',
-    category: 'Shopping',
-    amount: 89,
-    date: '2026-05-12',
-    notes: 'New sneakers',
-  },
-  {
-    id: '5',
-    category: 'Education',
-    amount: 120,
-    date: '2026-05-10',
-    notes: 'Online course subscription',
-  },
-]
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -120,7 +74,7 @@ function DeleteButton({ onClick }: { onClick: () => void }) {
 
 interface ExpenseRowProps {
   expense: Expense
-  onDelete: (id: string) => void
+  onDelete: (id: number) => void
 }
 
 function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
@@ -129,7 +83,9 @@ function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
       <article className="flex items-start justify-between gap-3">
         <section className="min-w-0 flex-1 space-y-2">
           <p className="flex items-center gap-2 text-sm font-medium text-gray-900">
-            <span aria-hidden>{CATEGORY_EMOJI[expense.category]}</span>
+            <span aria-hidden>
+              {CATEGORY_EMOJI[expense.category as Category] ?? '📦'}
+            </span>
             <span>{expense.category}</span>
           </p>
           <p className="text-lg font-bold text-blue-600">
@@ -148,13 +104,12 @@ function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
   )
 }
 
-export function ExpenseList() {
-  const [expenses, setExpenses] = useState<Expense[]>(SAMPLE_EXPENSES)
+interface ExpenseListProps {
+  expenses: Expense[]
+  onDeleteExpense: (id: number) => void
+}
 
-  const handleDelete = (id: string) => {
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
-  }
-
+export function ExpenseList({ expenses, onDeleteExpense }: ExpenseListProps) {
   if (expenses.length === 0) {
     return (
       <section className="w-full">
@@ -176,7 +131,11 @@ export function ExpenseList() {
 
       <ul className="flex flex-col gap-3 md:hidden">
         {expenses.map((expense) => (
-          <ExpenseCard key={expense.id} expense={expense} onDelete={handleDelete} />
+          <ExpenseCard
+            key={expense.id}
+            expense={expense}
+            onDelete={onDeleteExpense}
+          />
         ))}
       </ul>
 
@@ -198,7 +157,9 @@ export function ExpenseList() {
               <tr key={expense.id} className="text-gray-700">
                 <td className="px-4 py-4 font-medium text-gray-900 sm:px-6">
                   <span className="inline-flex items-center gap-2">
-                    <span aria-hidden>{CATEGORY_EMOJI[expense.category]}</span>
+                    <span aria-hidden>
+              {CATEGORY_EMOJI[expense.category as Category] ?? '📦'}
+            </span>
                     {expense.category}
                   </span>
                 </td>
@@ -214,7 +175,7 @@ export function ExpenseList() {
                   )}
                 </td>
                 <td className="px-4 py-4 text-right sm:px-6">
-                  <DeleteButton onClick={() => handleDelete(expense.id)} />
+                  <DeleteButton onClick={() => onDeleteExpense(expense.id)} />
                 </td>
               </tr>
             ))}

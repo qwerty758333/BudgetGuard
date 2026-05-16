@@ -1,6 +1,17 @@
 import { StatCard } from './StatCard'
+import type { Expense, Budgets } from '../App'
 
-export function Dashboard() {
+interface DashboardProps {
+  expenses: Expense[]
+  budgets: Budgets
+  onSetBudgetLimit?: (category: string, amount: number) => void
+}
+
+export function Dashboard({ expenses, budgets }: DashboardProps) {
+  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const totalBudget = Object.values(budgets).reduce((sum, n) => sum + n, 0)
+  const remaining = totalBudget - totalSpent
+  const categoryCount = new Set(expenses.map((e) => e.category)).size
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6 sm:mb-8">
@@ -13,9 +24,15 @@ export function Dashboard() {
         aria-label="Budget overview"
         className="grid grid-cols-1 gap-4 min-[320px]:gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-3 lg:gap-6"
       >
-        <StatCard label="Total Spent" value="$0.00" />
-        <StatCard label="Remaining Budget" value="$1000.00" />
-        <StatCard label="Categories" value={0} />
+        <StatCard
+          label="Total Spent"
+          value={`$${totalSpent.toFixed(2)}`}
+        />
+        <StatCard
+          label="Remaining Budget"
+          value={`$${remaining.toFixed(2)}`}
+        />
+        <StatCard label="Categories" value={categoryCount} />
       </section>
 
       <section aria-label="Spending by category" className="mt-8 sm:mt-10">
