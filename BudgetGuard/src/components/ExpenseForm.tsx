@@ -12,15 +12,12 @@ const CATEGORIES = [
 
 type Category = (typeof CATEGORIES)[number]
 
-export interface ExpenseFormData {
-  amount: number
-  category: Category
-  date: string
-  notes: string
-}
-
 function getTodayDate(): string {
-  return new Date().toISOString().slice(0, 10)
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function getInitialState() {
@@ -38,7 +35,16 @@ const inputClassName =
 const labelClassName =
   'mb-1.5 block text-sm font-medium text-gray-500 dark:text-gray-400'
 
-export function ExpenseForm() {
+interface ExpenseFormProps {
+  onAddExpense: (
+    amount: number,
+    category: string,
+    date: string,
+    notes: string,
+  ) => void
+}
+
+export function ExpenseForm({ onAddExpense }: ExpenseFormProps) {
   const [amount, setAmount] = useState(getInitialState().amount)
   const [category, setCategory] = useState<Category>(getInitialState().category)
   const [date, setDate] = useState(getInitialState().date)
@@ -55,14 +61,15 @@ export function ExpenseForm() {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const formData: ExpenseFormData = {
-      amount: Number(amount),
-      category,
-      date,
-      notes: notes.trim(),
+    const parsedAmount = Number(amount)
+
+    if (!parsedAmount || parsedAmount <= 0) {
+      alert('Amount must be greater than 0')
+      return
     }
 
-    console.log(formData)
+    onAddExpense(parsedAmount, category, date, notes.trim())
+    resetForm()
   }
 
   return (

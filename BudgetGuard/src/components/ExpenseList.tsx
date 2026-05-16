@@ -1,72 +1,18 @@
-import { useState } from 'react'
+import type { Expense } from '../App'
 
-const CATEGORIES = [
-  'Food',
-  'Entertainment',
-  'Education',
-  'Transport',
-  'Shopping',
-  'Healthcare',
-  'Other',
-] as const
-
-type Category = (typeof CATEGORIES)[number]
-
-export interface Expense {
-  id: string
-  category: Category
-  amount: number
-  date: string
-  notes: string
-}
-
-const CATEGORY_EMOJI: Record<Category, string> = {
-  Food: '🍔',
+const CATEGORY_EMOJI: Record<string, string> = {
+  Food: '🍽️',
   Entertainment: '🎬',
   Education: '📚',
   Transport: '🚗',
   Shopping: '🛍️',
   Healthcare: '🏥',
-  Other: '📦',
+  Other: '📌',
 }
 
-const SAMPLE_EXPENSES: Expense[] = [
-  {
-    id: '1',
-    category: 'Food',
-    amount: 24.5,
-    date: '2026-05-15',
-    notes: 'Grocery run',
-  },
-  {
-    id: '2',
-    category: 'Transport',
-    amount: 45,
-    date: '2026-05-14',
-    notes: 'Uber to office',
-  },
-  {
-    id: '3',
-    category: 'Entertainment',
-    amount: 15.99,
-    date: '2026-05-13',
-    notes: 'Movie night',
-  },
-  {
-    id: '4',
-    category: 'Shopping',
-    amount: 89,
-    date: '2026-05-12',
-    notes: 'New sneakers',
-  },
-  {
-    id: '5',
-    category: 'Education',
-    amount: 120,
-    date: '2026-05-10',
-    notes: 'Online course subscription',
-  },
-]
+function getCategoryEmoji(category: string): string {
+  return CATEGORY_EMOJI[category] ?? '📌'
+}
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -83,28 +29,6 @@ function formatDate(date: string): string {
   })
 }
 
-function TrashIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden
-    >
-      <path d="M3 6h18" />
-      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-    </svg>
-  )
-}
-
 function DeleteButton({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -113,14 +37,14 @@ function DeleteButton({ onClick }: { onClick: () => void }) {
       className="rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
       aria-label="Delete expense"
     >
-      <TrashIcon />
+      <span aria-hidden>🗑️</span>
     </button>
   )
 }
 
 interface ExpenseRowProps {
   expense: Expense
-  onDelete: (id: string) => void
+  onDelete: (id: number) => void
 }
 
 function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
@@ -128,8 +52,8 @@ function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
     <li className="rounded-xl bg-white p-4 shadow-md dark:bg-gray-800 dark:shadow-lg">
       <article className="flex items-start justify-between gap-3">
         <section className="min-w-0 flex-1 space-y-2">
-          <p className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-            <span aria-hidden>{CATEGORY_EMOJI[expense.category]}</span>
+          <p className="flex items-center gap-2 text-sm font-medium text-gray-900">
+            <span aria-hidden>{getCategoryEmoji(expense.category)}</span>
             <span>{expense.category}</span>
           </p>
           <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
@@ -148,21 +72,20 @@ function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
   )
 }
 
-export function ExpenseList() {
-  const [expenses, setExpenses] = useState<Expense[]>(SAMPLE_EXPENSES)
+interface ExpenseListProps {
+  expenses: Expense[]
+  onDeleteExpense: (id: number) => void
+}
 
-  const handleDelete = (id: string) => {
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
-  }
-
+export function ExpenseList({ expenses, onDeleteExpense }: ExpenseListProps) {
   if (expenses.length === 0) {
     return (
       <section className="w-full">
         <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100 sm:text-xl">
           Recent Expenses
         </h2>
-        <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-400">
-          No expenses yet.
+        <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
+          No expenses yet. Add one to get started!
         </p>
       </section>
     )
@@ -176,7 +99,11 @@ export function ExpenseList() {
 
       <ul className="flex flex-col gap-3 md:hidden">
         {expenses.map((expense) => (
-          <ExpenseCard key={expense.id} expense={expense} onDelete={handleDelete} />
+          <ExpenseCard
+            key={expense.id}
+            expense={expense}
+            onDelete={onDeleteExpense}
+          />
         ))}
       </ul>
 
@@ -198,7 +125,7 @@ export function ExpenseList() {
               <tr key={expense.id} className="text-gray-700 dark:text-gray-300">
                 <td className="px-4 py-4 font-medium text-gray-900 dark:text-gray-100 sm:px-6">
                   <span className="inline-flex items-center gap-2">
-                    <span aria-hidden>{CATEGORY_EMOJI[expense.category]}</span>
+                    <span aria-hidden>{getCategoryEmoji(expense.category)}</span>
                     {expense.category}
                   </span>
                 </td>
@@ -214,7 +141,7 @@ export function ExpenseList() {
                   )}
                 </td>
                 <td className="px-4 py-4 text-right sm:px-6">
-                  <DeleteButton onClick={() => handleDelete(expense.id)} />
+                  <DeleteButton onClick={() => onDeleteExpense(expense.id)} />
                 </td>
               </tr>
             ))}
