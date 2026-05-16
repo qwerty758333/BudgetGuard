@@ -11,14 +11,14 @@ export function useAuth() {
     const { data, error } = await supabase
       .from('admin_users')
       .select('role')
-      .eq('id', userId)
-      .single()
+      .eq('user_id', userId)
+      .maybeSingle()
 
     if (error) {
       console.error('Error fetching role:', error.message)
       setRole('user')
     } else {
-      setRole(data.role as 'user' | 'admin')
+      setRole((data?.role as 'user' | 'admin') ?? 'user')
     }
   }
 

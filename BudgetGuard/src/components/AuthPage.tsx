@@ -54,12 +54,27 @@ function AuthPage() {
       setError(signUpError.message)
     } else {
       if (data.user) {
-        await supabase
+        const { error: adminRowError } = await supabase
           .from('admin_users')
           .upsert(
-            [{ id: data.user.id, email: data.user.email ?? email, role: 'user' }],
-            { onConflict: 'id', ignoreDuplicates: true },
+            [
+              {
+                user_id: data.user.id,
+                email: data.user.email ?? email,
+                role: 'user',
+              },
+            ],
+            { onConflict: 'user_id', ignoreDuplicates: true },
           )
+
+        if (adminRowError && import.meta.env.DEV) {
+          console.error('[AuthPage] admin_users upsert failed', {
+            message: adminRowError.message,
+            details: adminRowError.details,
+            hint: adminRowError.hint,
+            code: adminRowError.code,
+          })
+        }
       }
 
       setSuccessMessage(
