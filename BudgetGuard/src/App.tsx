@@ -5,6 +5,7 @@ import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
 import { BudgetSettings } from './components/BudgetSettings'
 import { useAuth } from './hooks/useAuth'
+import { isSupabaseConfigured } from './lib/supabase'
 import {
   loadFromLocalStorage,
   saveToLocalStorage,
@@ -113,6 +114,25 @@ function App() {
 
   const handleSaveBudget = (category: string, amount: number) => {
     setBudgetLimit(category, amount)
+  }
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
+        <div className="max-w-md rounded-xl border border-amber-200 bg-white p-6 text-center shadow-sm dark:border-amber-800 dark:bg-gray-800">
+          <div className="mb-3 text-4xl">⚠️</div>
+          <h1 className="mb-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+            Configuration required
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Set <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">VITE_SUPABASE_URL</code>{' '}
+            and{' '}
+            <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">VITE_SUPABASE_ANON_KEY</code>{' '}
+            in your Netlify environment variables, then redeploy.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
