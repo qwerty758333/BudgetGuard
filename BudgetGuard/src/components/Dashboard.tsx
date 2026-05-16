@@ -4,6 +4,7 @@ import type { Expense, Budgets } from '../App'
 interface DashboardProps {
   expenses: Expense[]
   budgets: Budgets
+  onSetBudgetLimit?: (category: string, amount: number) => void
 }
 
 function formatCurrency(amount: number): string {
