@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
-import { loadFromLocalStorage, saveToLocalStorage } from './utils/storage'
+import { BudgetSettings } from './components/BudgetSettings'
+import {
+  loadFromLocalStorage,
+  saveToLocalStorage,
+  DEFAULT_BUDGETS,
+} from './utils/storage'
 
 export interface Expense {
   id: number
@@ -17,20 +22,11 @@ export interface Budgets {
   [category: string]: number
 }
 
-const DEFAULT_BUDGETS: Budgets = {
-  Food: 300,
-  Entertainment: 100,
-  Education: 200,
-  Transport: 150,
-  Shopping: 200,
-  Healthcare: 100,
-  Other: 100,
-}
-
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [budgets, setBudgets] = useState<Budgets>(DEFAULT_BUDGETS)
   const [darkMode, setDarkMode] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   // Load data from localStorage on app start
   useEffect(() => {
@@ -38,13 +34,11 @@ function App() {
     if (saved.expenses.length > 0) {
       setExpenses(saved.expenses)
     }
-    if (Object.keys(saved.budgets).length > 0) {
-      setBudgets(saved.budgets)
-    }
+    setBudgets(saved.budgets)
     if (saved.darkMode) {
       setDarkMode(saved.darkMode)
     }
-  }, []) // Empty array means run once on mount
+  }, [])
 
   // Save to localStorage whenever state changes
   useEffect(() => {
@@ -85,23 +79,41 @@ function App() {
     }))
   }
 
+  const handleSaveBudget = (category: string, amount: number) => {
+    setBudgetLimit(category, amount)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-600 px-6 py-4 text-white shadow-md">
-        <h1 className="text-center text-2xl font-bold">BudgetGuard</h1>
+        <div className="mx-auto flex max-w-4xl items-center justify-between">
+          <h1 className="text-2xl font-bold">BudgetGuard</h1>
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-blue-700 px-3 text-xl transition hover:bg-blue-800"
+            aria-label="Open budget settings"
+          >
+            ⚙️
+          </button>
+        </div>
       </header>
 
       <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
         <ExpenseForm onAddExpense={addExpense} />
-        <Dashboard
-          expenses={expenses}
-          budgets={budgets}
-          onSetBudgetLimit={setBudgetLimit}
-        />
+        <Dashboard expenses={expenses} budgets={budgets} />
         <ExpenseList expenses={expenses} onDeleteExpense={deleteExpense} />
       </main>
+
+      <BudgetSettings
+        budgets={budgets}
+        onSaveBudget={handleSaveBudget}
+        onClose={() => setIsSettingsOpen(false)}
+        isOpen={isSettingsOpen}
+      />
     </div>
   )
 }
 
 export default App
+

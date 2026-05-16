@@ -1,11 +1,16 @@
 const EXPENSES_KEY = 'budgetguard-expenses'
 const BUDGETS_KEY = 'budgetguard-budgets'
+const CUSTOM_BUDGETS_KEY = 'budgetguard-custom-budgets'
 const DARK_MODE_KEY = 'budgetguard-darkmode'
 
-const DEFAULT_LOAD_RESULT = {
-  expenses: [] as any[],
-  budgets: {} as Record<string, number>,
-  darkMode: false,
+export const DEFAULT_BUDGETS: Record<string, number> = {
+  Food: 300,
+  Entertainment: 100,
+  Education: 200,
+  Transport: 150,
+  Shopping: 200,
+  Healthcare: 100,
+  Other: 100,
 }
 
 function isLocalStorageAvailable(): boolean {
@@ -23,6 +28,57 @@ function isLocalStorageAvailable(): boolean {
   }
 }
 
+function parseBudgets(raw: string | null): Record<string, number> | null {
+  if (!raw) {
+    return null
+  }
+
+  const parsed = JSON.parse(raw)
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    return parsed as Record<string, number>
+  }
+
+  return null
+}
+
+export function saveCustomBudgets(budgets: Record<string, number>): void {
+  if (!isLocalStorageAvailable()) {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(CUSTOM_BUDGETS_KEY, JSON.stringify(budgets))
+  } catch {
+    // Silently ignore storage errors
+  }
+}
+
+export function loadCustomBudgets(): Record<string, number> {
+  if (!isLocalStorageAvailable()) {
+    return { ...DEFAULT_BUDGETS }
+  }
+
+  try {
+    const customRaw = window.localStorage.getItem(CUSTOM_BUDGETS_KEY)
+    const custom = parseBudgets(customRaw)
+
+    if (custom && Object.keys(custom).length > 0) {
+      return { ...DEFAULT_BUDGETS, ...custom }
+    }
+
+    const legacyRaw = window.localStorage.getItem(BUDGETS_KEY)
+    const legacy = parseBudgets(legacyRaw)
+
+    if (legacy && Object.keys(legacy).length > 0) {
+      return { ...DEFAULT_BUDGETS, ...legacy }
+    }
+
+    return { ...DEFAULT_BUDGETS }
+  } catch {
+    return { ...DEFAULT_BUDGETS }
+  }
+}
+
 export function saveToLocalStorage(
   expenses: any[],
   budgets: Record<string, number>,
@@ -34,8 +90,8 @@ export function saveToLocalStorage(
 
   try {
     window.localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses))
-    window.localStorage.setItem(BUDGETS_KEY, JSON.stringify(budgets))
     window.localStorage.setItem(DARK_MODE_KEY, JSON.stringify(darkMode))
+    saveCustomBudgets(budgets)
   } catch {
     // Silently ignore storage errors
   }
@@ -47,27 +103,30 @@ export function loadFromLocalStorage(): {
   darkMode: boolean
 } {
   if (!isLocalStorageAvailable()) {
-    return { ...DEFAULT_LOAD_RESULT }
+    return {
+      expenses: [],
+      budgets: { ...DEFAULT_BUDGETS },
+      darkMode: false,
+    }
   }
 
   try {
     const expensesRaw = window.localStorage.getItem(EXPENSES_KEY)
-    const budgetsRaw = window.localStorage.getItem(BUDGETS_KEY)
     const darkModeRaw = window.localStorage.getItem(DARK_MODE_KEY)
 
     const expenses = expensesRaw ? JSON.parse(expensesRaw) : []
-    const budgets = budgetsRaw ? JSON.parse(budgetsRaw) : {}
     const darkMode = darkModeRaw ? JSON.parse(darkModeRaw) : false
 
     return {
       expenses: Array.isArray(expenses) ? expenses : [],
-      budgets:
-        budgets && typeof budgets === 'object' && !Array.isArray(budgets)
-          ? budgets
-          : {},
+      budgets: loadCustomBudgets(),
       darkMode: typeof darkMode === 'boolean' ? darkMode : false,
     }
   } catch {
-    return { ...DEFAULT_LOAD_RESULT }
+    return {
+      expenses: [],
+      budgets: { ...DEFAULT_BUDGETS },
+      darkMode: false,
+    }
   }
 }

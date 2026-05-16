@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "confetti-react": "^2.6.0",
     "framer-motion": "^12.38.0",
     "react": "^19.2.5",
+    "react-confetti": "^6.4.0",
     "react-dom": "^19.2.5",
     "recharts": "^3.8.1"
   },
