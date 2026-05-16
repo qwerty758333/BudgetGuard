@@ -57,14 +57,15 @@ function ChartTooltip({ active, payload }: ChartTooltipProps) {
 export function SpendingChart({ data }: SpendingChartProps) {
   if (data.length === 0) {
     return (
-      <section className="flex h-[300px] w-full items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+      <section className="flex h-[300px] w-full items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
         <p className="text-sm text-gray-500 dark:text-gray-400">No spending data to display.</p>
       </section>
     )
   }
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <section className="rounded-xl bg-white p-4 shadow-md dark:bg-gray-800 dark:shadow-lg">
+      <ResponsiveContainer width="100%" height={300}>
       <PieChart>
         <Pie
           data={data}
@@ -92,5 +93,6 @@ export function SpendingChart({ data }: SpendingChartProps) {
         />
       </PieChart>
     </ResponsiveContainer>
+    </section>
   )
 }

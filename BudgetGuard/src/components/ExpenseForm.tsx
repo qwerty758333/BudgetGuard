@@ -137,7 +137,7 @@ export function ExpenseForm({ onAddExpense }: ExpenseFormProps) {
         <button
           type="button"
           onClick={resetForm}
-          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 sm:w-auto sm:text-base"
+          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 sm:w-auto sm:text-base dark:hover:bg-gray-600"
         >
           Cancel
         </button>

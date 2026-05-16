@@ -52,7 +52,7 @@ function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
     <li className="rounded-xl bg-white p-4 shadow-md dark:bg-gray-800 dark:shadow-lg">
       <article className="flex items-start justify-between gap-3">
         <section className="min-w-0 flex-1 space-y-2">
-          <p className="flex items-center gap-2 text-sm font-medium text-gray-900">
+          <p className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-white">
             <span aria-hidden>{getCategoryEmoji(expense.category)}</span>
             <span>{expense.category}</span>
           </p>
@@ -84,7 +84,7 @@ export function ExpenseList({ expenses, onDeleteExpense }: ExpenseListProps) {
         <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100 sm:text-xl">
           Recent Expenses
         </h2>
-        <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
+        <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
           No expenses yet. Add one to get started!
         </p>
       </section>
@@ -93,7 +93,7 @@ export function ExpenseList({ expenses, onDeleteExpense }: ExpenseListProps) {
 
   return (
     <section className="w-full">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900 sm:text-xl">
+      <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white sm:text-xl">
         Recent Expenses
       </h2>
 

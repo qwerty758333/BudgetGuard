@@ -30,7 +30,7 @@ export function Dashboard({ expenses, budgets }: DashboardProps) {
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl">
           Dashboard
         </h1>
-        <p className="mt-2 text-sm text-gray-500 sm:text-base">
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 sm:text-base">
           Track your spending and see how much budget you have left.
         </p>
       </header>
@@ -48,12 +48,12 @@ export function Dashboard({ expenses, budgets }: DashboardProps) {
       </section>
 
       <section aria-label="Spending by category" className="mt-8 sm:mt-10">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 sm:text-xl">
+        <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white sm:text-xl">
           Spending by Category
         </h2>
         {expenses.length === 0 ? (
-          <article className="flex min-h-[240px] w-full items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 p-6 text-center sm:min-h-[280px] sm:p-8">
-            <p className="max-w-sm text-sm text-gray-500 sm:text-base">
+          <article className="flex min-h-[240px] w-full items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 p-6 text-center dark:border-gray-700 dark:bg-gray-900 sm:min-h-[280px] sm:p-8">
+            <p className="max-w-sm text-sm text-gray-600 dark:text-gray-300 sm:text-base">
               Add an expense to see your spending breakdown!
             </p>
           </article>
