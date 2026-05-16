@@ -44,13 +44,15 @@ export type Database = {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+export const supabase = createClient<Database>(
+  supabaseUrl ?? '',
+  supabaseAnonKey ?? '',
+)
+
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     'Missing Supabase env vars: set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local',
   )
 }
 
-const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
-
-export { supabase }
 export default supabase
