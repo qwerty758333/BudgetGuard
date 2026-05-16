@@ -21,8 +21,8 @@ export function Dashboard({ expenses, budgets }: DashboardProps) {
   const totalSpent = getTotalSpent(expenses)
   const totalBudget = getTotalBudget(budgets)
   const remainingBudget = totalBudget - totalSpent
-  const categoryCount = getCategoryBreakdownData(expenses).length
   const chartData = getCategoryBreakdownData(expenses)
+  const categoryCount = chartData.length
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

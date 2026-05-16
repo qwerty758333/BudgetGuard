@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
+import { loadFromLocalStorage, saveToLocalStorage } from './utils/storage'
 
 export interface Expense {
   id: number
@@ -29,6 +30,30 @@ const DEFAULT_BUDGETS: Budgets = {
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [budgets, setBudgets] = useState<Budgets>(DEFAULT_BUDGETS)
+  const [darkMode, setDarkMode] = useState(false)
+
+  // Load data from localStorage on app start
+  useEffect(() => {
+    const saved = loadFromLocalStorage()
+    if (saved.expenses.length > 0) {
+      setExpenses(saved.expenses)
+    }
+    if (Object.keys(saved.budgets).length > 0) {
+      setBudgets(saved.budgets)
+    }
+    if (saved.darkMode) {
+      setDarkMode(saved.darkMode)
+    }
+  }, []) // Empty array means run once on mount
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    saveToLocalStorage(expenses, budgets, darkMode)
+  }, [expenses, budgets, darkMode])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
 
   const addExpense = (
     amount: number,
