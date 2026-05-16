@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
-import { loadFromLocalStorage, saveToLocalStorage } from './utils/storage'
+import { BudgetSettings } from './components/BudgetSettings'
+import {
+  loadFromLocalStorage,
+  saveToLocalStorage,
+  DEFAULT_BUDGETS,
+} from './utils/storage'
 
 export interface Expense {
   id: number
@@ -17,6 +22,7 @@ export interface Budgets {
   [category: string]: number
 }
 
+<<<<<<< HEAD
 const DEFAULT_BUDGETS: Budgets = {
   Food: 300,
   Entertainment: 100,
@@ -64,19 +70,20 @@ function SunIcon() {
   )
 }
 
+=======
+>>>>>>> 7bfa52c639d9ce03d0c5c9d34f7852151b4ca89b
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [budgets, setBudgets] = useState<Budgets>(DEFAULT_BUDGETS)
   const [darkMode, setDarkMode] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   useEffect(() => {
     const saved = loadFromLocalStorage()
     if (saved.expenses.length > 0) {
       setExpenses(saved.expenses)
     }
-    if (Object.keys(saved.budgets).length > 0) {
-      setBudgets(saved.budgets)
-    }
+    setBudgets(saved.budgets)
     if (saved.darkMode) {
       setDarkMode(saved.darkMode)
     }
@@ -116,7 +123,12 @@ function App() {
     }))
   }
 
+  const handleSaveBudget = (category: string, amount: number) => {
+    setBudgetLimit(category, amount)
+  }
+
   return (
+<<<<<<< HEAD
     <div className={darkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
         <header className="flex items-center justify-between bg-blue-600 px-4 py-4 text-white shadow-md dark:bg-blue-900 sm:px-6">
@@ -151,8 +163,38 @@ function App() {
           <ExpenseList expenses={expenses} onDeleteExpense={deleteExpense} />
         </main>
       </div>
+=======
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-blue-600 px-6 py-4 text-white shadow-md">
+        <div className="mx-auto flex max-w-4xl items-center justify-between">
+          <h1 className="text-2xl font-bold">BudgetGuard</h1>
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-blue-700 px-3 text-xl transition hover:bg-blue-800"
+            aria-label="Open budget settings"
+          >
+            ⚙️
+          </button>
+        </div>
+      </header>
+
+      <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
+        <ExpenseForm onAddExpense={addExpense} />
+        <Dashboard expenses={expenses} budgets={budgets} />
+        <ExpenseList expenses={expenses} onDeleteExpense={deleteExpense} />
+      </main>
+
+      <BudgetSettings
+        budgets={budgets}
+        onSaveBudget={handleSaveBudget}
+        onClose={() => setIsSettingsOpen(false)}
+        isOpen={isSettingsOpen}
+      />
+>>>>>>> 7bfa52c639d9ce03d0c5c9d34f7852151b4ca89b
     </div>
   )
 }
 
 export default App
+
