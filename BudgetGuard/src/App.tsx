@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import AuthPage from './components/AuthPage'
+import { useBadges } from './hooks/useBadges'
+import { BadgeGallery } from './components/BadgeGallery'
+import { Celebration } from './components/Celebration'
 import { AdminAnalytics } from './pages/AdminAnalytics'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
@@ -70,6 +73,8 @@ function BudgetGuardApp() {
   const [budgets, setBudgets] = useState<Budgets>({ ...DEFAULT_BUDGETS })
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+
+  const { earnedBadges, newlyEarned } = useBadges(expenses, budgets)
 
   useEffect(() => {
     const saved = loadFromLocalStorage()
@@ -232,7 +237,10 @@ function BudgetGuardApp() {
         </header>
 
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-          <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
+          {newlyEarned.length > 0 && (
+            <Celebration show={true} badgeName={newlyEarned[0]} />
+          )}
+          <ExpenseForm userId={userId} onAddExpense={addExpense} />
           <Dashboard
             userId={userId}
             expenses={expenses}
@@ -245,6 +253,9 @@ function BudgetGuardApp() {
             expenses={expenses}
             onDeleteExpense={handleDeleteExpense}
           />
+          <div className="mt-12">
+            <BadgeGallery earnedBadges={earnedBadges} />
+          </div>
         </main>
 
         <BudgetSettings
