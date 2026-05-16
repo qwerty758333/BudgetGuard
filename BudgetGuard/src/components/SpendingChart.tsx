@@ -6,6 +6,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts'
+import { formatCurrency } from '../utils/currency'
 
 export interface SpendingChartDataItem {
   name: string
@@ -24,13 +25,6 @@ const COLORS = [
   '#F59E0B',
   '#8B5CF6',
 ]
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount)
-}
 
 interface ChartTooltipProps {
   active?: boolean

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import AuthPage from './components/AuthPage'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
 import { BudgetSettings } from './components/BudgetSettings'
+import { useAuth } from './hooks/useAuth'
 import {
   loadFromLocalStorage,
   saveToLocalStorage,
@@ -60,6 +62,7 @@ function SunIcon() {
 }
 
 function App() {
+  const { session, user, loading, logout } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [budgets, setBudgets] = useState<Budgets>({ ...DEFAULT_BUDGETS })
   const [darkMode, setDarkMode] = useState(false)
@@ -94,12 +97,10 @@ function App() {
       notes,
       timestamp: Date.now(),
     }
-    console.log('Adding expense:', newExpense)
     setExpenses((prev) => [...prev, newExpense])
   }
 
   const deleteExpense = (id: number) => {
-    console.log('Deleting expense:', id)
     setExpenses((prev) => prev.filter((expense) => expense.id !== id))
   }
 
@@ -113,6 +114,25 @@ function App() {
   const handleSaveBudget = (category: string, amount: number) => {
     setBudgetLimit(category, amount)
   }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="mb-4 text-5xl">🛡️</div>
+          <p className="text-lg text-gray-500 dark:text-gray-400">
+            Loading BudgetGuard...
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return <AuthPage />
+  }
+
+  const userId = user!.id
 
   return (
     <div className={darkMode ? 'dark' : ''}>
@@ -146,17 +166,29 @@ function App() {
                 </>
               )}
             </button>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
+            >
+              Sign out
+            </button>
           </div>
         </header>
 
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-          <ExpenseForm onAddExpense={addExpense} />
+          <ExpenseForm userId={userId} onAddExpense={addExpense} />
           <Dashboard
+            userId={userId}
             expenses={expenses}
             budgets={budgets}
             onSetBudgetLimit={setBudgetLimit}
           />
-          <ExpenseList expenses={expenses} onDeleteExpense={deleteExpense} />
+          <ExpenseList
+            userId={userId}
+            expenses={expenses}
+            onDeleteExpense={deleteExpense}
+          />
         </main>
 
         <BudgetSettings

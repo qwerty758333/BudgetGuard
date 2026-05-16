@@ -3,14 +3,16 @@ const BUDGETS_KEY = 'budgetguard-budgets'
 const CUSTOM_BUDGETS_KEY = 'budgetguard-custom-budgets'
 const DARK_MODE_KEY = 'budgetguard-darkmode'
 
+import { convertUsdToLkr } from './currency'
+
 export const DEFAULT_BUDGETS: Record<string, number> = {
-  Food: 300,
-  Entertainment: 100,
-  Education: 200,
-  Transport: 150,
-  Shopping: 200,
-  Healthcare: 100,
-  Other: 100,
+  Food: convertUsdToLkr(300),
+  Entertainment: convertUsdToLkr(100),
+  Education: convertUsdToLkr(200),
+  Transport: convertUsdToLkr(150),
+  Shopping: convertUsdToLkr(200),
+  Healthcare: convertUsdToLkr(100),
+  Other: convertUsdToLkr(100),
 }
 
 function isLocalStorageAvailable(): boolean {
