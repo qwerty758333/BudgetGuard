@@ -45,9 +45,9 @@ function ChartTooltip({ active, payload }: ChartTooltipProps) {
   const item = payload[0].payload
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-md">
-      <p className="text-sm font-medium text-gray-900">{item.name}</p>
-      <p className="text-sm font-semibold text-blue-600">
+    <section className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-md dark:border-gray-600 dark:bg-gray-800">
+      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.name}</p>
+      <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
         {formatCurrency(item.value)}
       </p>
     </section>
@@ -57,8 +57,8 @@ function ChartTooltip({ active, payload }: ChartTooltipProps) {
 export function SpendingChart({ data }: SpendingChartProps) {
   if (data.length === 0) {
     return (
-      <section className="flex h-[300px] w-full items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-        <p className="text-sm text-gray-500">No spending data to display.</p>
+      <section className="flex h-[300px] w-full items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+        <p className="text-sm text-gray-500 dark:text-gray-400">No spending data to display.</p>
       </section>
     )
   }
@@ -87,7 +87,7 @@ export function SpendingChart({ data }: SpendingChartProps) {
           verticalAlign="bottom"
           height={36}
           formatter={(value: string) => (
-            <span className="text-sm text-gray-700">{value}</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">{value}</span>
           )}
         />
       </PieChart>
