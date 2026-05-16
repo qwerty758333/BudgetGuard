@@ -41,29 +41,29 @@ export type Database = {
   }
 }
 
-/** Project root only — no /rest/v1 (the SDK adds paths for auth and REST). */
-function normalizeSupabaseUrl(url: string): string {
-  return url.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '')
-}
-
 const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (!rawSupabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase env vars: set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local',
-  )
+/** Supabase project URL only (no /rest/v1 suffix). */
+function normalizeSupabaseUrl(url: string | undefined): string {
+  if (!url) return ''
+  return url.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '')
 }
 
 const supabaseUrl = normalizeSupabaseUrl(rawSupabaseUrl)
 
-if (/\/rest\/v1/i.test(supabaseUrl)) {
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+
+if (isSupabaseConfigured && /\/rest\/v1/i.test(supabaseUrl)) {
   throw new Error(
     'VITE_SUPABASE_URL must be the project root (e.g. https://YOUR_PROJECT.supabase.co), not a /rest/v1 path.',
   )
 }
 
-const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+const supabase = createClient<Database>(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder',
+)
 
 export { supabase }
 export default supabase
