@@ -27,7 +27,38 @@ const DEFAULT_BUDGETS: Budgets = {
 }
 
 function App() {
-  const [darkMode, setDarkMode] = useState(false)
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [budgets, setBudgets] = useState<Budgets>(DEFAULT_BUDGETS)
+
+  const addExpense = (
+    amount: number,
+    category: string,
+    date: string,
+    notes: string,
+  ) => {
+    const newExpense: Expense = {
+      id: Date.now(),
+      amount,
+      category,
+      date,
+      notes,
+      timestamp: Date.now(),
+    }
+    console.log('Adding expense:', newExpense)
+    setExpenses((prev) => [...prev, newExpense])
+  }
+
+  const deleteExpense = (id: number) => {
+    console.log('Deleting expense:', id)
+    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
+  }
+
+  const setBudgetLimit = (category: string, amount: number) => {
+    setBudgets((prev) => ({
+      ...prev,
+      [category]: amount,
+    }))
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
