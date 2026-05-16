@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { trackEvent } from '../services/analyticsService'
 
 const CATEGORIES = [
   'Food',
@@ -46,7 +47,6 @@ interface ExpenseFormProps {
 }
 
 export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
-  void userId
   const [amount, setAmount] = useState(getInitialState().amount)
   const [category, setCategory] = useState<Category>(getInitialState().category)
   const [date, setDate] = useState(getInitialState().date)
@@ -70,7 +70,21 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
       return
     }
 
-    await onAddExpense(parsedAmount, category, date, notes.trim())
+    const trimmedNotes = notes.trim()
+
+    await onAddExpense(parsedAmount, category, date, trimmedNotes)
+
+    await trackEvent(
+      'expense_added',
+      {
+        amount: parsedAmount,
+        category,
+        description: trimmedNotes,
+        timestamp: new Date().toISOString(),
+      },
+      userId,
+    )
+
     resetForm()
   }
 
@@ -153,3 +167,22 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
     </form>
   )
 }
+
+/** Call from the AI Suggest handler after `result` is available. */
+export async function trackAiSuggestUsed(
+  userId: string,
+  description: string,
+  result: { category: string; confidence: number },
+): Promise<void> {
+  await trackEvent(
+    'ai_used',
+    {
+      description,
+      suggestedCategory: result.category,
+      confidence: result.confidence,
+      timestamp: new Date().toISOString(),
+    },
+    userId,
+  )
+}
+

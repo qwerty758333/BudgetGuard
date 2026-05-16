@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Route, Routes } from 'react-router-dom'
 import AuthPage from './components/AuthPage'
+import { AdminAnalytics } from './pages/AdminAnalytics'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
@@ -8,6 +10,7 @@ import { useAuth } from './hooks/useAuth'
 import { useExpenses } from './hooks/useExpenses'
 import type { Category } from './types'
 import { isSupabaseConfigured } from './lib/supabase'
+import { trackEvent } from './services/analyticsService'
 import {
   loadFromLocalStorage,
   saveToLocalStorage,
@@ -55,7 +58,7 @@ function SunIcon() {
   )
 }
 
-function App() {
+function BudgetGuardApp() {
   const { session, user, loading, logout } = useAuth()
   const {
     expenses,
@@ -99,10 +102,6 @@ function App() {
       date,
       notes: notes || null,
     })
-  }
-
-  const handleDeleteExpense = async (id: string) => {
-    await deleteExpense(id)
   }
 
   const setBudgetLimit = (category: string, amount: number) => {
@@ -154,12 +153,48 @@ function App() {
 
   const userId = user!.id
 
+  const handleDarkModeToggle = async () => {
+    await trackEvent(
+      'dark_mode_toggled',
+      {
+        enabled: !darkMode,
+        timestamp: new Date().toISOString(),
+      },
+      userId,
+    )
+    setDarkMode(!darkMode)
+  }
+
+  const handleDeleteExpense = async (id: string) => {
+    const expense = expenses.find((item) => item.id === id)
+    if (expense) {
+      await trackEvent(
+        'expense_deleted',
+        {
+          expenseId: id,
+          amount: expense.amount,
+          category: expense.category,
+          timestamp: new Date().toISOString(),
+        },
+        userId,
+      )
+    }
+    await deleteExpense(id)
+  }
+
   return (
     <div className={darkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
         <header className="flex items-center justify-between bg-blue-600 px-4 py-4 text-white shadow-md dark:bg-blue-900 sm:px-6">
           <h1 className="text-2xl font-bold sm:text-3xl">BudgetGuard</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <a
+              href="/admin/analytics"
+              className="rounded-lg border border-white/30 bg-white/10 px-2 py-2 text-xs font-medium text-white transition hover:bg-white/20 sm:px-3 sm:text-sm"
+            >
+              📊 <span className="hidden sm:inline">Admin Analytics</span>
+              <span className="sm:hidden">Admin</span>
+            </a>
             <button
               type="button"
               onClick={() => setIsSettingsOpen(true)}
@@ -170,7 +205,7 @@ function App() {
             </button>
             <button
               type="button"
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => void handleDarkModeToggle()}
               className="flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
               aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
@@ -220,6 +255,15 @@ function App() {
         />
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/admin/analytics" element={<AdminAnalytics />} />
+      <Route path="/*" element={<BudgetGuardApp />} />
+    </Routes>
   )
 }
 

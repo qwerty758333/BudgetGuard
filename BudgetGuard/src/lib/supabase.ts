@@ -33,6 +33,54 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_users: {
+        Row: {
+          id: string
+          user_id: string
+          email: string | null
+          role: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email?: string | null
+          role?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email?: string | null
+          role?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          id: string
+          event_type: string
+          event_data: Record<string, unknown>
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_type: string
+          event_data: Record<string, unknown>
+          user_id?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_type?: string
+          event_data?: Record<string, unknown>
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
