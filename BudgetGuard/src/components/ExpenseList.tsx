@@ -67,11 +67,13 @@ function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
 }
 
 interface ExpenseListProps {
+  userId: string
   expenses: Expense[]
   onDeleteExpense: (id: number) => void
 }
 
-export function ExpenseList({ expenses, onDeleteExpense }: ExpenseListProps) {
+export function ExpenseList({ userId, expenses, onDeleteExpense }: ExpenseListProps) {
+  void userId
   if (expenses.length === 0) {
     return (
       <section className="w-full">
