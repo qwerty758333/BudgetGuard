@@ -1,9 +1,13 @@
-import { useState } from 'react'
-import AuthPage from './components/AuthPage'
+import { useEffect, useState } from 'react'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
-import { useAuth } from './hooks/useAuth'
+import { BudgetSettings } from './components/BudgetSettings'
+import {
+  loadFromLocalStorage,
+  saveToLocalStorage,
+  DEFAULT_BUDGETS,
+} from './utils/storage'
 
 export interface Expense {
   id: number
@@ -18,20 +22,32 @@ export interface Budgets {
   [category: string]: number
 }
 
-const DEFAULT_BUDGETS: Budgets = {
-  Food: 300,
-  Entertainment: 100,
-  Education: 200,
-  Transport: 150,
-  Shopping: 200,
-  Healthcare: 100,
-  Other: 100,
-}
-
 function App() {
-  const { session, user, loading, logout } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [budgets, setBudgets] = useState<Budgets>(DEFAULT_BUDGETS)
+  const [darkMode, setDarkMode] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+
+  // Load data from localStorage on app start
+  useEffect(() => {
+    const saved = loadFromLocalStorage()
+    if (saved.expenses.length > 0) {
+      setExpenses(saved.expenses)
+    }
+    setBudgets(saved.budgets)
+    if (saved.darkMode) {
+      setDarkMode(saved.darkMode)
+    }
+  }, [])
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    saveToLocalStorage(expenses, budgets, darkMode)
+  }, [expenses, budgets, darkMode])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
 
   const addExpense = (
     amount: number,
@@ -47,10 +63,12 @@ function App() {
       notes,
       timestamp: Date.now(),
     }
+    console.log('Adding expense:', newExpense)
     setExpenses((prev) => [...prev, newExpense])
   }
 
   const deleteExpense = (id: number) => {
+    console.log('Deleting expense:', id)
     setExpenses((prev) => prev.filter((expense) => expense.id !== id))
   }
 
@@ -61,70 +79,41 @@ function App() {
     }))
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="mb-4 text-5xl">🛡️</div>
-          <p className="text-lg text-gray-500">Loading BudgetGuard...</p>
-        </div>
-      </div>
-    )
+  const handleSaveBudget = (category: string, amount: number) => {
+    setBudgetLimit(category, amount)
   }
-
-  if (!session) {
-    return <AuthPage />
-  }
-
-  const userId = user!.id
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] font-sans text-[#1F2937] dark:bg-gray-900 dark:text-gray-100">
-      <header className="border-b border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-2">
-            <span
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#2563EB] text-sm font-bold text-white"
-              aria-hidden
-            >
-              BG
-            </span>
-            <h1 className="text-xl font-semibold tracking-tight">BudgetGuard</h1>
-          </div>
-
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-blue-600 px-6 py-4 text-white shadow-md">
+        <div className="mx-auto flex max-w-4xl items-center justify-between">
+          <h1 className="text-2xl font-bold">BudgetGuard</h1>
           <button
             type="button"
-            onClick={() => void logout()}
-            className="text-sm text-gray-500 transition-colors hover:text-red-500"
+            onClick={() => setIsSettingsOpen(true)}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-blue-700 px-3 text-xl transition hover:bg-blue-800"
+            aria-label="Open budget settings"
           >
-            Sign out
+            ⚙️
           </button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-          <section className="w-full space-y-6 lg:w-1/2 lg:shrink-0">
-            <ExpenseForm userId={userId} onAddExpense={addExpense} />
-            <ExpenseList
-              userId={userId}
-              expenses={expenses}
-              onDeleteExpense={deleteExpense}
-            />
-          </section>
-
-          <section className="w-full lg:w-1/2">
-            <Dashboard
-              userId={userId}
-              expenses={expenses}
-              budgets={budgets}
-              onSetBudgetLimit={setBudgetLimit}
-            />
-          </section>
-        </div>
+      <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
+        <ExpenseForm onAddExpense={addExpense} />
+        <Dashboard expenses={expenses} budgets={budgets} />
+        <ExpenseList expenses={expenses} onDeleteExpense={deleteExpense} />
       </main>
+
+      <BudgetSettings
+        budgets={budgets}
+        onSaveBudget={handleSaveBudget}
+        onClose={() => setIsSettingsOpen(false)}
+        isOpen={isSettingsOpen}
+      />
     </div>
   )
 }
 
 export default App
+

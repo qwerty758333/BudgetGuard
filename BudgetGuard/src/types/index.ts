@@ -53,12 +53,14 @@ export const CATEGORIES: Category[] = [
   'Other',
 ]
 
+import { convertUsdToLkr } from '../utils/currency'
+
 export const DEFAULT_BUDGET_LIMITS: Record<Category, number> = {
-  Food: 300,
-  Entertainment: 100,
-  Education: 200,
-  Transport: 150,
-  Shopping: 200,
-  Healthcare: 100,
-  Other: 100,
+  Food: convertUsdToLkr(300),
+  Entertainment: convertUsdToLkr(100),
+  Education: convertUsdToLkr(200),
+  Transport: convertUsdToLkr(150),
+  Shopping: convertUsdToLkr(200),
+  Healthcare: convertUsdToLkr(100),
+  Other: convertUsdToLkr(100),
 }
