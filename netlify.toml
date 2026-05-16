@@ -1,0 +1,15 @@
+# App lives in BudgetGuard/ (monorepo-style layout). Without `base`, Netlify runs
+# npm from the repo root and fails: ENOENT package.json.
+
+[build]
+  base = "BudgetGuard"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
