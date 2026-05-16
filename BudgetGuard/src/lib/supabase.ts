@@ -95,16 +95,23 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 /** Supabase project URL only (no /rest/v1 suffix). */
 function normalizeSupabaseUrl(url: string | undefined): string {
   if (!url) return ''
-  return url.replace(/\/rest\/v1\/?$/i, '').replace(/\/$/, '')
+  return url.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '')
 }
 
 const supabaseUrl = normalizeSupabaseUrl(rawSupabaseUrl)
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
-export const supabase = createClient<Database>(
+if (isSupabaseConfigured && /\/rest\/v1/i.test(supabaseUrl)) {
+  throw new Error(
+    'VITE_SUPABASE_URL must be the project root (e.g. https://YOUR_PROJECT.supabase.co), not a /rest/v1 path.',
+  )
+}
+
+const supabase = createClient<Database>(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder',
 )
 
+export { supabase }
 export default supabase

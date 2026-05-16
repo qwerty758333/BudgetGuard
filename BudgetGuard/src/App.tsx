@@ -7,6 +7,8 @@ import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
 import { BudgetSettings } from './components/BudgetSettings'
 import { useAuth } from './hooks/useAuth'
+import { useExpenses } from './hooks/useExpenses'
+import type { Category } from './types'
 import { isSupabaseConfigured } from './lib/supabase'
 import { trackEvent } from './services/analyticsService'
 import {
@@ -14,15 +16,6 @@ import {
   saveToLocalStorage,
   DEFAULT_BUDGETS,
 } from './utils/storage'
-
-export interface Expense {
-  id: number
-  amount: number
-  category: string
-  date: string
-  notes: string
-  timestamp: number
-}
 
 export interface Budgets {
   [category: string]: number
@@ -67,16 +60,19 @@ function SunIcon() {
 
 function BudgetGuardApp() {
   const { session, user, loading, logout } = useAuth()
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const {
+    expenses,
+    loading: expensesLoading,
+    addExpense,
+    deleteExpense,
+  } = useExpenses(user?.id)
+
   const [budgets, setBudgets] = useState<Budgets>({ ...DEFAULT_BUDGETS })
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   useEffect(() => {
     const saved = loadFromLocalStorage()
-    if (saved.expenses.length > 0) {
-      setExpenses(saved.expenses)
-    }
     setBudgets(saved.budgets)
     if (saved.darkMode) {
       setDarkMode(saved.darkMode)
@@ -84,24 +80,28 @@ function BudgetGuardApp() {
   }, [])
 
   useEffect(() => {
-    saveToLocalStorage(expenses, budgets, darkMode)
-  }, [expenses, budgets, darkMode])
+    saveToLocalStorage(budgets, darkMode)
+  }, [budgets, darkMode])
 
-  const addExpense = (
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  const handleAddExpense = async (
     amount: number,
     category: string,
     date: string,
     notes: string,
   ) => {
-    const newExpense: Expense = {
-      id: Date.now(),
+    if (!user) return
+
+    await addExpense({
+      user_id: user.id,
       amount,
-      category,
+      category: category as Category,
       date,
-      notes,
-      timestamp: Date.now(),
-    }
-    setExpenses((prev) => [...prev, newExpense])
+      notes: notes || null,
+    })
   }
 
   const setBudgetLimit = (category: string, amount: number) => {
@@ -165,7 +165,7 @@ function BudgetGuardApp() {
     setDarkMode(!darkMode)
   }
 
-  const handleDeleteExpense = async (id: number) => {
+  const handleDeleteExpense = async (id: string) => {
     const expense = expenses.find((item) => item.id === id)
     if (expense) {
       await trackEvent(
@@ -179,7 +179,7 @@ function BudgetGuardApp() {
         userId,
       )
     }
-    setExpenses((prev) => prev.filter((item) => item.id !== id))
+    await deleteExpense(id)
   }
 
   return (
@@ -232,11 +232,12 @@ function BudgetGuardApp() {
         </header>
 
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-          <ExpenseForm userId={userId} onAddExpense={addExpense} />
+          <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
           <Dashboard
             userId={userId}
             expenses={expenses}
             budgets={budgets}
+            expensesLoading={expensesLoading}
             onSetBudgetLimit={setBudgetLimit}
           />
           <ExpenseList

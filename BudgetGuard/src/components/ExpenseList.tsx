@@ -1,4 +1,4 @@
-import type { Expense } from '../App'
+import type { Expense } from '../types'
 import { formatCurrency } from '../utils/currency'
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -38,7 +38,7 @@ function DeleteButton({ onClick }: { onClick: () => void }) {
 
 interface ExpenseRowProps {
   expense: Expense
-  onDelete: (id: number) => void
+  onDelete: (id: string) => void
 }
 
 function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
@@ -69,7 +69,7 @@ function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
 interface ExpenseListProps {
   userId: string
   expenses: Expense[]
-  onDeleteExpense: (id: number) => void
+  onDeleteExpense: (id: string) => void | Promise<void>
 }
 
 export function ExpenseList({ userId, expenses, onDeleteExpense }: ExpenseListProps) {

@@ -43,7 +43,7 @@ interface ExpenseFormProps {
     category: string,
     date: string,
     notes: string,
-  ) => void
+  ) => void | Promise<void>
 }
 
 export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
@@ -72,7 +72,7 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
 
     const trimmedNotes = notes.trim()
 
-    onAddExpense(parsedAmount, category, date, trimmedNotes)
+    await onAddExpense(parsedAmount, category, date, trimmedNotes)
 
     await trackEvent(
       'expense_added',
