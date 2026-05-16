@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+<<<<<<< HEAD
+=======
 
 :root {
   --text: #6b6375;
@@ -111,3 +113,4 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+>>>>>>> d569dabd0a6be5d826eee527b038ecce4869f31f
