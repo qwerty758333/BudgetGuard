@@ -26,11 +26,47 @@ function hasAdminRole(user: User): boolean {
 
 function hasAdminEmail(user: User): boolean {
   const adminEmails = getAdminEmailsFromEnv()
-  if (!user.email || adminEmails.length === 0) {
+  const normalizedUserEmail = user.email?.trim().toLowerCase()
+  if (!normalizedUserEmail || adminEmails.length === 0) {
     return false
   }
 
-  return adminEmails.includes(user.email.toLowerCase())
+  return adminEmails.includes(normalizedUserEmail)
+}
+
+/** Whether admin env vars were present at Vite build time (e.g. Netlify). */
+export function getAdminDeploymentDiagnostics(): {
+  adminEmailConfigured: boolean
+  adminUserIdsConfigured: boolean
+  supabaseUrlConfigured: boolean
+  supabaseKeyConfigured: boolean
+} {
+  return {
+    adminEmailConfigured: getAdminEmailsFromEnv().length > 0,
+    adminUserIdsConfigured:
+      (import.meta.env.VITE_ADMIN_USER_IDS?.split(',').filter(Boolean).length ??
+        0) > 0,
+    supabaseUrlConfigured: Boolean(import.meta.env.VITE_SUPABASE_URL?.trim()),
+    supabaseKeyConfigured: Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()),
+  }
+}
+
+/**
+ * Optional production debug: append `?admin_debug=1` to the URL, then check the console.
+ * Does not log secret values.
+ */
+export function logAdminDeploymentDebug(context: string, user?: User | null): void {
+  if (typeof window === 'undefined') return
+  if (!new URLSearchParams(window.location.search).has('admin_debug')) return
+
+  const diagnostics = getAdminDeploymentDiagnostics()
+  console.log(`[${context}] ADMIN EMAIL configured:`, diagnostics.adminEmailConfigured)
+  console.log(`[${context}] ADMIN USER IDS configured:`, diagnostics.adminUserIdsConfigured)
+  console.log(`[${context}] SUPABASE URL EXISTS:`, diagnostics.supabaseUrlConfigured)
+  console.log(`[${context}] SUPABASE KEY EXISTS:`, diagnostics.supabaseKeyConfigured)
+  if (user) {
+    console.log(`[${context}] auth user`, { id: user.id, email: user.email })
+  }
 }
 
 /**
