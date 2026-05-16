@@ -240,7 +240,7 @@ function BudgetGuardApp() {
           {newlyEarned.length > 0 && (
             <Celebration show={true} badgeName={newlyEarned[0]} />
           )}
-          <ExpenseForm userId={userId} onAddExpense={addExpense} />
+          <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
           <Dashboard
             userId={userId}
             expenses={expenses}

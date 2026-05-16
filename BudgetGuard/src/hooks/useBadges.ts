@@ -13,7 +13,7 @@ category: string;
 
 date: string;
 
-notes: string;
+notes: string | null;
 
 }
 
