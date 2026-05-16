@@ -22,17 +22,6 @@ export interface Budgets {
   [category: string]: number
 }
 
-<<<<<<< HEAD
-const DEFAULT_BUDGETS: Budgets = {
-  Food: 300,
-  Entertainment: 100,
-  Education: 200,
-  Transport: 150,
-  Shopping: 200,
-  Healthcare: 100,
-  Other: 100,
-}
-
 function MoonIcon() {
   return (
     <svg
@@ -70,11 +59,9 @@ function SunIcon() {
   )
 }
 
-=======
->>>>>>> 7bfa52c639d9ce03d0c5c9d34f7852151b4ca89b
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([])
-  const [budgets, setBudgets] = useState<Budgets>(DEFAULT_BUDGETS)
+  const [budgets, setBudgets] = useState<Budgets>({ ...DEFAULT_BUDGETS })
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
@@ -128,29 +115,38 @@ function App() {
   }
 
   return (
-<<<<<<< HEAD
     <div className={darkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
         <header className="flex items-center justify-between bg-blue-600 px-4 py-4 text-white shadow-md dark:bg-blue-900 sm:px-6">
           <h1 className="text-2xl font-bold sm:text-3xl">BudgetGuard</h1>
-          <button
-            type="button"
-            onClick={() => setDarkMode(!darkMode)}
-            className="flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
-            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {darkMode ? (
-              <>
-                <SunIcon />
-                <span className="hidden sm:inline">Light</span>
-              </>
-            ) : (
-              <>
-                <MoonIcon />
-                <span className="hidden sm:inline">Dark</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/30 bg-white/10 text-xl transition hover:bg-white/20"
+              aria-label="Open budget settings"
+            >
+              ⚙️
+            </button>
+            <button
+              type="button"
+              onClick={() => setDarkMode(!darkMode)}
+              className="flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
+              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {darkMode ? (
+                <>
+                  <SunIcon />
+                  <span className="hidden sm:inline">Light</span>
+                </>
+              ) : (
+                <>
+                  <MoonIcon />
+                  <span className="hidden sm:inline">Dark</span>
+                </>
+              )}
+            </button>
+          </div>
         </header>
 
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
@@ -162,39 +158,16 @@ function App() {
           />
           <ExpenseList expenses={expenses} onDeleteExpense={deleteExpense} />
         </main>
+
+        <BudgetSettings
+          budgets={budgets}
+          onSaveBudget={handleSaveBudget}
+          onClose={() => setIsSettingsOpen(false)}
+          isOpen={isSettingsOpen}
+        />
       </div>
-=======
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-blue-600 px-6 py-4 text-white shadow-md">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <h1 className="text-2xl font-bold">BudgetGuard</h1>
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-blue-700 px-3 text-xl transition hover:bg-blue-800"
-            aria-label="Open budget settings"
-          >
-            ⚙️
-          </button>
-        </div>
-      </header>
-
-      <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-        <ExpenseForm onAddExpense={addExpense} />
-        <Dashboard expenses={expenses} budgets={budgets} />
-        <ExpenseList expenses={expenses} onDeleteExpense={deleteExpense} />
-      </main>
-
-      <BudgetSettings
-        budgets={budgets}
-        onSaveBudget={handleSaveBudget}
-        onClose={() => setIsSettingsOpen(false)}
-        isOpen={isSettingsOpen}
-      />
->>>>>>> 7bfa52c639d9ce03d0c5c9d34f7852151b4ca89b
     </div>
   )
 }
 
 export default App
-
