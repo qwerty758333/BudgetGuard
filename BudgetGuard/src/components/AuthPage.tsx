@@ -45,7 +45,7 @@ function AuthPage() {
     setError(null)
     setSuccessMessage(null)
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     })
@@ -53,6 +53,15 @@ function AuthPage() {
     if (signUpError) {
       setError(signUpError.message)
     } else {
+      if (data.user) {
+        await supabase
+          .from('admin_users')
+          .upsert(
+            [{ id: data.user.id, email: data.user.email ?? email, role: 'user' }],
+            { onConflict: 'id', ignoreDuplicates: true },
+          )
+      }
+
       setSuccessMessage(
         'Account created! Please check your email to confirm your account, then sign in.',
       )
