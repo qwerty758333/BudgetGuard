@@ -1,4 +1,5 @@
 import type { Expense } from '../App'
+import { formatCurrency } from '../utils/currency'
 
 const CATEGORY_EMOJI: Record<string, string> = {
   Food: '🍽️',
@@ -14,15 +15,8 @@ function getCategoryEmoji(category: string): string {
   return CATEGORY_EMOJI[category] ?? '📌'
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount)
-}
-
 function formatDate(date: string): string {
-  return new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('en-LK', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

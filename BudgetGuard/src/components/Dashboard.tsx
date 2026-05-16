@@ -6,15 +6,12 @@ import {
   getTotalBudget,
   getCategoryBreakdownData,
 } from '../utils/budgetCalculations'
+import { formatCurrency } from '../utils/currency'
 
 interface DashboardProps {
   expenses: Expense[]
   budgets: Budgets
   onSetBudgetLimit?: (category: string, amount: number) => void
-}
-
-function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(2)}`
 }
 
 export function Dashboard({ expenses, budgets }: DashboardProps) {

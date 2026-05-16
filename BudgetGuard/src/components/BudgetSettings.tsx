@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getTotalBudget } from '../utils/budgetCalculations'
+import { convertUsdToLkr, formatCurrency } from '../utils/currency'
 import { DEFAULT_BUDGETS } from '../utils/storage'
 
 const CATEGORIES = [
@@ -13,17 +14,13 @@ const CATEGORIES = [
 ] as const
 
 const MIN_BUDGET = 0
-const MAX_BUDGET = 10000
+const MAX_BUDGET = convertUsdToLkr(10000)
 
 export interface BudgetSettingsProps {
   budgets: Record<string, number>
   onSaveBudget: (category: string, amount: number) => void
   onClose: () => void
   isOpen: boolean
-}
-
-function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(2)}`
 }
 
 function validateBudget(value: string): string | null {
@@ -42,7 +39,7 @@ function validateBudget(value: string): string | null {
   }
 
   if (amount > MAX_BUDGET) {
-    return 'Maximum is $10,000'
+    return `Maximum is LKR ${MAX_BUDGET.toLocaleString('en-LK')}`
   }
 
   return null

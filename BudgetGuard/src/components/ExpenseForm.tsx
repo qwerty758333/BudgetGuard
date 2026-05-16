@@ -88,7 +88,7 @@ export function ExpenseForm({ onAddExpense }: ExpenseFormProps) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className={inputClassName}
-            placeholder="0.00"
+            placeholder="LKR 0.00"
           />
         </label>
 
