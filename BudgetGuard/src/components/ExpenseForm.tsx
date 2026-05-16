@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { trackEvent } from '../services/analyticsService'
+import { predictCategory, type CategoryPrediction } from '../utils/ai.ts'
 
 const CATEGORIES = [
   'Food',
@@ -23,11 +23,16 @@ function getTodayDate(): string {
 
 function getInitialState() {
   return {
+    description: '',
     amount: '',
     category: 'Food' as Category,
     date: getTodayDate(),
     notes: '',
   }
+}
+
+function isValidCategory(value: string): value is Category {
+  return CATEGORIES.includes(value as Category)
 }
 
 const inputClassName =
@@ -43,24 +48,60 @@ interface ExpenseFormProps {
     category: string,
     date: string,
     notes: string,
-  ) => void | Promise<void>
+  ) => void
 }
 
 export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
+  void userId
+  const [description, setDescription] = useState(getInitialState().description)
   const [amount, setAmount] = useState(getInitialState().amount)
   const [category, setCategory] = useState<Category>(getInitialState().category)
   const [date, setDate] = useState(getInitialState().date)
   const [notes, setNotes] = useState(getInitialState().notes)
+  const [isLoading, setIsLoading] = useState(false)
+  const [aiSuggestion, setAiSuggestion] = useState<CategoryPrediction | null>(null)
 
   const resetForm = () => {
     const initial = getInitialState()
+    setDescription(initial.description)
     setAmount(initial.amount)
     setCategory(initial.category)
     setDate(initial.date)
     setNotes(initial.notes)
+    setAiSuggestion(null)
+    setIsLoading(false)
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleDescriptionChange = (value: string) => {
+    setDescription(value)
+    setAiSuggestion(null)
+  }
+
+  const handleAutoCategory = async () => {
+    if (!description.trim()) {
+      alert('Please enter description first')
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const result = await predictCategory(description)
+      setAiSuggestion(result)
+      setCategory(isValidCategory(result.category) ? result.category : 'Other')
+    } catch {
+      setAiSuggestion({
+        category: 'Other',
+        confidence: 0,
+        reasoning: 'AI service unavailable',
+      })
+      setCategory('Other')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const parsedAmount = Number(amount)
@@ -70,23 +111,13 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
       return
     }
 
-    const trimmedNotes = notes.trim()
-
-    await onAddExpense(parsedAmount, category, date, trimmedNotes)
-
-    await trackEvent(
-      'expense_added',
-      {
-        amount: parsedAmount,
-        category,
-        description: trimmedNotes,
-        timestamp: new Date().toISOString(),
-      },
-      userId,
-    )
-
+    onAddExpense(parsedAmount, category, date, notes.trim())
     resetForm()
   }
+
+  const confidencePercent = aiSuggestion
+    ? Math.round(aiSuggestion.confidence * 100)
+    : 0
 
   return (
     <form
@@ -94,6 +125,17 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
       className="w-full rounded-xl bg-white p-4 shadow-md dark:bg-gray-800 dark:shadow-lg sm:p-6"
     >
       <fieldset className="grid grid-cols-1 gap-4 border-0 p-0 sm:grid-cols-2 sm:gap-5">
+        <label className="block sm:col-span-2">
+          <span className={labelClassName}>Description</span>
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => handleDescriptionChange(e.target.value)}
+            className={inputClassName}
+            placeholder="e.g. Chipotle lunch, Uber to campus"
+          />
+        </label>
+
         <label className="block">
           <span className={labelClassName}>Amount</span>
           <input
@@ -108,8 +150,18 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
           />
         </label>
 
-        <label className="block">
-          <span className={labelClassName}>Category</span>
+        <div className="block">
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+            <span className={`${labelClassName} mb-0`}>Category</span>
+            <button
+              type="button"
+              onClick={() => void handleAutoCategory()}
+              disabled={!description.trim() || isLoading}
+              className="rounded bg-blue-600 px-3 py-1 text-sm text-white transition hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-500"
+            >
+              {isLoading ? '✨ Analyzing...' : '✨ AI Suggest'}
+            </button>
+          </div>
           <select
             required
             value={category}
@@ -122,7 +174,21 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
               </option>
             ))}
           </select>
-        </label>
+          {aiSuggestion != null && (
+            <section
+              className="mt-3 rounded border-l-4 border-blue-600 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-500 dark:bg-blue-950/40 dark:text-blue-100"
+              aria-live="polite"
+            >
+              <p className="font-medium">✨ AI suggests: {aiSuggestion.category}</p>
+              <p className="mt-1 text-blue-800 dark:text-blue-200">
+                {confidencePercent}% confident
+              </p>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                {aiSuggestion.reasoning}
+              </p>
+            </section>
+          )}
+        </div>
 
         <label className="block">
           <span className={labelClassName}>Date</span>
@@ -153,7 +219,7 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
         <button
           type="button"
           onClick={resetForm}
-          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 sm:w-auto sm:text-base dark:hover:bg-gray-600"
+          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 sm:w-auto sm:text-base"
         >
           Cancel
         </button>
@@ -167,22 +233,3 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
     </form>
   )
 }
-
-/** Call from the AI Suggest handler after `result` is available. */
-export async function trackAiSuggestUsed(
-  userId: string,
-  description: string,
-  result: { category: string; confidence: number },
-): Promise<void> {
-  await trackEvent(
-    'ai_used',
-    {
-      description,
-      suggestedCategory: result.category,
-      confidence: result.confidence,
-      timestamp: new Date().toISOString(),
-    },
-    userId,
-  )
-}
-
