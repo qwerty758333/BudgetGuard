@@ -110,7 +110,7 @@ function DeleteButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+      className="rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
       aria-label="Delete expense"
     >
       <TrashIcon />
@@ -125,21 +125,21 @@ interface ExpenseRowProps {
 
 function ExpenseCard({ expense, onDelete }: ExpenseRowProps) {
   return (
-    <li className="rounded-xl bg-white p-4 shadow-md">
+    <li className="rounded-xl bg-white p-4 shadow-md dark:bg-gray-800 dark:shadow-lg">
       <article className="flex items-start justify-between gap-3">
         <section className="min-w-0 flex-1 space-y-2">
-          <p className="flex items-center gap-2 text-sm font-medium text-gray-900">
+          <p className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100">
             <span aria-hidden>{CATEGORY_EMOJI[expense.category]}</span>
             <span>{expense.category}</span>
           </p>
-          <p className="text-lg font-bold text-blue-600">
+          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
             {formatCurrency(expense.amount)}
           </p>
-          <p className="text-sm text-gray-500">{formatDate(expense.date)}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(expense.date)}</p>
           {expense.notes ? (
-            <p className="text-sm text-gray-600">{expense.notes}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">{expense.notes}</p>
           ) : (
-            <p className="text-sm italic text-gray-400">No notes</p>
+            <p className="text-sm italic text-gray-400 dark:text-gray-500">No notes</p>
           )}
         </section>
         <DeleteButton onClick={() => onDelete(expense.id)} />
@@ -158,10 +158,10 @@ export function ExpenseList() {
   if (expenses.length === 0) {
     return (
       <section className="w-full">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 sm:text-xl">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100 sm:text-xl">
           Recent Expenses
         </h2>
-        <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
+        <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-400">
           No expenses yet.
         </p>
       </section>
@@ -180,10 +180,10 @@ export function ExpenseList() {
         ))}
       </ul>
 
-      <section className="hidden overflow-x-auto rounded-xl bg-white shadow-md md:block">
+      <section className="hidden overflow-x-auto rounded-xl bg-white shadow-md dark:bg-gray-800 dark:shadow-lg md:block">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
+            <tr className="border-b border-gray-200 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:bg-gray-700/50 dark:text-gray-400">
               <th className="px-4 py-3 sm:px-6">Category</th>
               <th className="px-4 py-3 sm:px-6">Amount</th>
               <th className="px-4 py-3 sm:px-6">Date</th>
@@ -193,24 +193,24 @@ export function ExpenseList() {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {expenses.map((expense) => (
-              <tr key={expense.id} className="text-gray-700">
-                <td className="px-4 py-4 font-medium text-gray-900 sm:px-6">
+              <tr key={expense.id} className="text-gray-700 dark:text-gray-300">
+                <td className="px-4 py-4 font-medium text-gray-900 dark:text-gray-100 sm:px-6">
                   <span className="inline-flex items-center gap-2">
                     <span aria-hidden>{CATEGORY_EMOJI[expense.category]}</span>
                     {expense.category}
                   </span>
                 </td>
-                <td className="px-4 py-4 font-semibold text-blue-600 sm:px-6">
+                <td className="px-4 py-4 font-semibold text-blue-600 dark:text-blue-400 sm:px-6">
                   {formatCurrency(expense.amount)}
                 </td>
-                <td className="px-4 py-4 text-gray-600 sm:px-6">
+                <td className="px-4 py-4 text-gray-600 dark:text-gray-400 sm:px-6">
                   {formatDate(expense.date)}
                 </td>
-                <td className="max-w-xs truncate px-4 py-4 text-gray-600 sm:px-6">
+                <td className="max-w-xs truncate px-4 py-4 text-gray-600 dark:text-gray-300 sm:px-6">
                   {expense.notes || (
-                    <span className="italic text-gray-400">No notes</span>
+                    <span className="italic text-gray-400 dark:text-gray-500">No notes</span>
                   )}
                 </td>
                 <td className="px-4 py-4 text-right sm:px-6">
