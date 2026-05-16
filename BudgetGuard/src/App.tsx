@@ -6,16 +6,22 @@ import { ExpenseList } from './components/ExpenseList'
 import { BudgetSettings } from './components/BudgetSettings'
 import { useAuth } from './hooks/useAuth'
 import { useExpenses } from './hooks/useExpenses'
+import { useBudgets } from './hooks/useBudgets'
+import { useBadges } from './hooks/useBadges'
+import { useChallenges } from './hooks/useChallenges'
 import type { Category } from './types'
 import { isSupabaseConfigured } from './lib/supabase'
-import {
-  loadFromLocalStorage,
-  saveToLocalStorage,
-  DEFAULT_BUDGETS,
-} from './utils/storage'
+import { loadFromLocalStorage, saveToLocalStorage } from './utils/storage'
+import { checkBadges } from './utils/badges'
 
 export interface Budgets {
   [category: string]: number
+}
+
+const BADGE_ID_TO_SUPABASE: Record<string, string> = {
+  'budget-master': 'budget_master',
+  'meal-prepper': 'meal_prepper',
+  minimalist: 'minimalist',
 }
 
 function MoonIcon() {
@@ -64,25 +70,70 @@ function App() {
     deleteExpense,
   } = useExpenses(user?.id)
 
-  const [budgets, setBudgets] = useState<Budgets>({ ...DEFAULT_BUDGETS })
+  const {
+    budgets,
+    loading: budgetsLoading,
+    setBudget,
+  } = useBudgets(user?.id)
+
+  const {
+    badges,
+    loading: badgesLoading,
+    unlockBadge,
+  } = useBadges(user?.id)
+
+  const {
+    challenges,
+    loading: challengesLoading,
+    addChallenge,
+    updateChallengeProgress,
+    deleteChallenge,
+  } = useChallenges(user?.id)
+
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   useEffect(() => {
     const saved = loadFromLocalStorage()
-    setBudgets(saved.budgets)
     if (saved.darkMode) {
       setDarkMode(saved.darkMode)
     }
   }, [])
 
   useEffect(() => {
-    saveToLocalStorage(budgets, darkMode)
-  }, [budgets, darkMode])
+    saveToLocalStorage(darkMode)
+  }, [darkMode])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
   }, [darkMode])
+
+  useEffect(() => {
+    if (!user?.id || badgesLoading || badges.length === 0) return
+
+    const totalBudget = Object.values(budgets).reduce((sum, amount) => sum + amount, 0)
+    const earnedIds = checkBadges(
+      expenses.map((e) => ({ amount: e.amount, category: e.category })),
+      { total: totalBudget },
+    )
+
+    earnedIds.forEach((localId) => {
+      const badgeId = BADGE_ID_TO_SUPABASE[localId]
+      if (!badgeId) return
+
+      const row = badges.find((b) => b.badge_id === badgeId)
+      if (row && !row.unlocked) {
+        void unlockBadge(badgeId)
+      }
+    })
+  }, [expenses, budgets, badges, badgesLoading, user?.id, unlockBadge])
+
+  void challenges
+  void challengesLoading
+  void addChallenge
+  void updateChallengeProgress
+  void deleteChallenge
+  void budgetsLoading
 
   const handleAddExpense = async (
     amount: number,
@@ -105,15 +156,8 @@ function App() {
     await deleteExpense(id)
   }
 
-  const setBudgetLimit = (category: string, amount: number) => {
-    setBudgets((prev) => ({
-      ...prev,
-      [category]: amount,
-    }))
-  }
-
-  const handleSaveBudget = (category: string, amount: number) => {
-    setBudgetLimit(category, amount)
+  const handleSaveBudget = async (category: string, amount: number) => {
+    await setBudget(category, amount)
   }
 
   if (!isSupabaseConfigured) {
@@ -203,7 +247,7 @@ function App() {
             expenses={expenses}
             budgets={budgets}
             expensesLoading={expensesLoading}
-            onSetBudgetLimit={setBudgetLimit}
+            onSetBudgetLimit={handleSaveBudget}
           />
           <ExpenseList
             userId={userId}
