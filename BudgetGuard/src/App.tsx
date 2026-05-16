@@ -68,11 +68,7 @@ function App() {
 
       <main className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
         <ExpenseForm onAddExpense={addExpense} />
-        <Dashboard
-          expenses={expenses}
-          budgets={budgets}
-          onSetBudgetLimit={setBudgetLimit}
-        />
+        <Dashboard expenses={expenses} budgets={budgets} />
         <ExpenseList expenses={expenses} onDeleteExpense={deleteExpense} />
       </main>
     </div>
