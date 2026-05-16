@@ -5,20 +5,13 @@ import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
 import { BudgetSettings } from './components/BudgetSettings'
 import { useAuth } from './hooks/useAuth'
+import { useExpenses } from './hooks/useExpenses'
+import type { Category } from './types'
 import {
   loadFromLocalStorage,
   saveToLocalStorage,
   DEFAULT_BUDGETS,
 } from './utils/storage'
-
-export interface Expense {
-  id: number
-  amount: number
-  category: string
-  date: string
-  notes: string
-  timestamp: number
-}
 
 export interface Budgets {
   [category: string]: number
@@ -26,16 +19,19 @@ export interface Budgets {
 
 function App() {
   const { session, user, loading, logout } = useAuth()
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const {
+    expenses,
+    loading: expensesLoading,
+    addExpense,
+    deleteExpense,
+  } = useExpenses(user?.id)
+
   const [budgets, setBudgets] = useState<Budgets>(DEFAULT_BUDGETS)
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   useEffect(() => {
     const saved = loadFromLocalStorage()
-    if (saved.expenses.length > 0) {
-      setExpenses(saved.expenses)
-    }
     setBudgets(saved.budgets)
     if (saved.darkMode) {
       setDarkMode(saved.darkMode)
@@ -43,32 +39,32 @@ function App() {
   }, [])
 
   useEffect(() => {
-    saveToLocalStorage(expenses, budgets, darkMode)
-  }, [expenses, budgets, darkMode])
+    saveToLocalStorage(budgets, darkMode)
+  }, [budgets, darkMode])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
   }, [darkMode])
 
-  const addExpense = (
+  const handleAddExpense = async (
     amount: number,
     category: string,
     date: string,
     notes: string,
   ) => {
-    const newExpense: Expense = {
-      id: Date.now(),
+    if (!user) return
+
+    await addExpense({
+      user_id: user.id,
       amount,
-      category,
+      category: category as Category,
       date,
-      notes,
-      timestamp: Date.now(),
-    }
-    setExpenses((prev) => [...prev, newExpense])
+      notes: notes || null,
+    })
   }
 
-  const deleteExpense = (id: number) => {
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
+  const handleDeleteExpense = async (id: string) => {
+    await deleteExpense(id)
   }
 
   const setBudgetLimit = (category: string, amount: number) => {
@@ -125,12 +121,17 @@ function App() {
       </header>
 
       <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-        <ExpenseForm userId={userId} onAddExpense={addExpense} />
-        <Dashboard userId={userId} expenses={expenses} budgets={budgets} />
+        <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
+        <Dashboard
+          userId={userId}
+          expenses={expenses}
+          budgets={budgets}
+          expensesLoading={expensesLoading}
+        />
         <ExpenseList
           userId={userId}
           expenses={expenses}
-          onDeleteExpense={deleteExpense}
+          onDeleteExpense={handleDeleteExpense}
         />
       </main>
 
