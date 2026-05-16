@@ -1,0 +1,12 @@
+# Netlify build — Vite inlines env vars at build time (not runtime).
+# Set these in Netlify UI → Site configuration → Environment variables:
+#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY,
+#   VITE_ADMIN_EMAIL, VITE_ADMIN_USER_IDS
+# After adding/changing vars: Deploys → Trigger deploy → Clear cache and deploy site.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"

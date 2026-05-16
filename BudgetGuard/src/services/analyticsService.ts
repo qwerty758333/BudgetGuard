@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { resolveIsAdmin } from '../utils/adminAccess'
 
 /** Supported analytics event names. */
 export type AnalyticsEventType =
@@ -139,11 +140,7 @@ function logAnalyticsError(message: string, error?: unknown): void {
   }
 }
 
-/**
- * Returns true when the current session belongs to an admin user.
- * Admins are identified by `app_metadata.role === 'admin'`, `user_metadata.role === 'admin'`,
- * or an id listed in `VITE_ADMIN_USER_IDS` (comma-separated).
- */
+/** Returns true when the current session belongs to an admin user. */
 async function isAuthenticatedAdmin(
   client: SupabaseClient<AnalyticsDatabase>,
 ): Promise<boolean> {
@@ -157,43 +154,7 @@ async function isAuthenticatedAdmin(
       return false
     }
 
-    const { user } = session
-    const adminIds =
-      import.meta.env.VITE_ADMIN_USER_IDS?.split(',').map((id: string) =>
-        id.trim(),
-      ) ?? []
-
-    if (adminIds.includes(user.id)) {
-      return true
-    }
-
-    const appRole = user.app_metadata?.role
-    const userRole = user.user_metadata?.role
-
-    if (appRole === 'admin' || userRole === 'admin') {
-      return true
-    }
-
-    const adminEmails =
-      import.meta.env.VITE_ADMIN_EMAIL?.split(',').map((email: string) =>
-        email.trim().toLowerCase(),
-      ) ?? []
-
-    if (user.email && adminEmails.includes(user.email.toLowerCase())) {
-      return true
-    }
-
-    const { data: adminRow, error: adminRowError } = await client
-      .from('admin_users')
-      .select('user_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (!adminRowError && adminRow) {
-      return true
-    }
-
-    return false
+    return resolveIsAdmin(session.user)
   } catch (error) {
     logAnalyticsError('Failed to verify admin session', error)
     return false
