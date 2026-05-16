@@ -5,7 +5,7 @@ import { checkBadges, type Budgets, type Expense } from '../utils/badges';
 
 export interface UseBadgesExpense {
 
-id: string;
+id: string | number;
 
 amount: number;
 
