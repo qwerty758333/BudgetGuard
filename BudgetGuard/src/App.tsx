@@ -135,33 +135,21 @@ function App() {
   const userId = user!.id
 
   return (
-<<<<<<< HEAD
     <div className={darkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
         <header className="flex items-center justify-between bg-blue-600 px-4 py-4 text-white shadow-md dark:bg-blue-900 sm:px-6">
           <h1 className="text-2xl font-bold sm:text-3xl">BudgetGuard</h1>
-=======
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-blue-600 px-6 py-4 text-white shadow-md">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <h1 className="text-2xl font-bold">BudgetGuard</h1>
->>>>>>> bbd110954a8d2e10d218c4f7dc72bb906b07d94e
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setIsSettingsOpen(true)}
-<<<<<<< HEAD
               className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/30 bg-white/10 text-xl transition hover:bg-white/20"
-=======
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-blue-700 px-3 text-xl transition hover:bg-blue-800"
->>>>>>> bbd110954a8d2e10d218c4f7dc72bb906b07d94e
               aria-label="Open budget settings"
             >
               ⚙️
             </button>
             <button
               type="button"
-<<<<<<< HEAD
               onClick={() => setDarkMode(!darkMode)}
               className="flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
               aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -182,15 +170,10 @@ function App() {
               type="button"
               onClick={() => void logout()}
               className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
-=======
-              onClick={() => void logout()}
-              className="rounded-lg px-3 py-2 text-sm text-blue-100 transition-colors hover:text-white"
->>>>>>> bbd110954a8d2e10d218c4f7dc72bb906b07d94e
             >
               Sign out
             </button>
           </div>
-<<<<<<< HEAD
         </header>
 
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
@@ -207,20 +190,6 @@ function App() {
             onDeleteExpense={deleteExpense}
           />
         </main>
-=======
-        </div>
-      </header>
-
-      <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-        <ExpenseForm userId={userId} onAddExpense={addExpense} />
-        <Dashboard userId={userId} expenses={expenses} budgets={budgets} />
-        <ExpenseList
-          userId={userId}
-          expenses={expenses}
-          onDeleteExpense={deleteExpense}
-        />
-      </main>
->>>>>>> bbd110954a8d2e10d218c4f7dc72bb906b07d94e
 
         <BudgetSettings
           budgets={budgets}
