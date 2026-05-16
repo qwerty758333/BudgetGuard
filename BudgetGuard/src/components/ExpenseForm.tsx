@@ -36,6 +36,7 @@ const labelClassName =
   'mb-1.5 block text-sm font-medium text-gray-500 dark:text-gray-400'
 
 interface ExpenseFormProps {
+  userId: string
   onAddExpense: (
     amount: number,
     category: string,
@@ -44,7 +45,8 @@ interface ExpenseFormProps {
   ) => void
 }
 
-export function ExpenseForm({ onAddExpense }: ExpenseFormProps) {
+export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
+  void userId
   const [amount, setAmount] = useState(getInitialState().amount)
   const [category, setCategory] = useState<Category>(getInitialState().category)
   const [date, setDate] = useState(getInitialState().date)
