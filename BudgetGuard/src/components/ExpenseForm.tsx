@@ -42,7 +42,7 @@ interface ExpenseFormProps {
     category: string,
     date: string,
     notes: string,
-  ) => void
+  ) => void | Promise<void>
 }
 
 export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
@@ -60,7 +60,7 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
     setNotes(initial.notes)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const parsedAmount = Number(amount)
@@ -70,7 +70,7 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
       return
     }
 
-    onAddExpense(parsedAmount, category, date, notes.trim())
+    await onAddExpense(parsedAmount, category, date, notes.trim())
     resetForm()
   }
 

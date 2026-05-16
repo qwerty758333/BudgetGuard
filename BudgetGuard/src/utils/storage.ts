@@ -1,4 +1,3 @@
-const EXPENSES_KEY = 'budgetguard-expenses'
 const BUDGETS_KEY = 'budgetguard-budgets'
 const CUSTOM_BUDGETS_KEY = 'budgetguard-custom-budgets'
 const DARK_MODE_KEY = 'budgetguard-darkmode'
@@ -82,7 +81,6 @@ export function loadCustomBudgets(): Record<string, number> {
 }
 
 export function saveToLocalStorage(
-  expenses: any[],
   budgets: Record<string, number>,
   darkMode: boolean,
 ): void {
@@ -91,7 +89,6 @@ export function saveToLocalStorage(
   }
 
   try {
-    window.localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses))
     window.localStorage.setItem(DARK_MODE_KEY, JSON.stringify(darkMode))
     saveCustomBudgets(budgets)
   } catch {
@@ -113,14 +110,11 @@ export function loadFromLocalStorage(): {
   }
 
   try {
-    const expensesRaw = window.localStorage.getItem(EXPENSES_KEY)
     const darkModeRaw = window.localStorage.getItem(DARK_MODE_KEY)
-
-    const expenses = expensesRaw ? JSON.parse(expensesRaw) : []
     const darkMode = darkModeRaw ? JSON.parse(darkModeRaw) : false
 
     return {
-      expenses: Array.isArray(expenses) ? expenses : [],
+      expenses: [],
       budgets: loadCustomBudgets(),
       darkMode: typeof darkMode === 'boolean' ? darkMode : false,
     }

@@ -5,20 +5,14 @@ import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
 import { BudgetSettings } from './components/BudgetSettings'
 import { useAuth } from './hooks/useAuth'
+import { useExpenses } from './hooks/useExpenses'
+import type { Category } from './types'
+import { isSupabaseConfigured } from './lib/supabase'
 import {
   loadFromLocalStorage,
   saveToLocalStorage,
   DEFAULT_BUDGETS,
 } from './utils/storage'
-
-export interface Expense {
-  id: number
-  amount: number
-  category: string
-  date: string
-  notes: string
-  timestamp: number
-}
 
 export interface Budgets {
   [category: string]: number
@@ -63,16 +57,19 @@ function SunIcon() {
 
 function App() {
   const { session, user, loading, logout } = useAuth()
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const {
+    expenses,
+    loading: expensesLoading,
+    addExpense,
+    deleteExpense,
+  } = useExpenses(user?.id)
+
   const [budgets, setBudgets] = useState<Budgets>({ ...DEFAULT_BUDGETS })
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   useEffect(() => {
     const saved = loadFromLocalStorage()
-    if (saved.expenses.length > 0) {
-      setExpenses(saved.expenses)
-    }
     setBudgets(saved.budgets)
     if (saved.darkMode) {
       setDarkMode(saved.darkMode)
@@ -80,28 +77,32 @@ function App() {
   }, [])
 
   useEffect(() => {
-    saveToLocalStorage(expenses, budgets, darkMode)
-  }, [expenses, budgets, darkMode])
+    saveToLocalStorage(budgets, darkMode)
+  }, [budgets, darkMode])
 
-  const addExpense = (
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  const handleAddExpense = async (
     amount: number,
     category: string,
     date: string,
     notes: string,
   ) => {
-    const newExpense: Expense = {
-      id: Date.now(),
+    if (!user) return
+
+    await addExpense({
+      user_id: user.id,
       amount,
-      category,
+      category: category as Category,
       date,
-      notes,
-      timestamp: Date.now(),
-    }
-    setExpenses((prev) => [...prev, newExpense])
+      notes: notes || null,
+    })
   }
 
-  const deleteExpense = (id: number) => {
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
+  const handleDeleteExpense = async (id: string) => {
+    await deleteExpense(id)
   }
 
   const setBudgetLimit = (category: string, amount: number) => {
@@ -113,6 +114,25 @@ function App() {
 
   const handleSaveBudget = (category: string, amount: number) => {
     setBudgetLimit(category, amount)
+  }
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
+        <div className="max-w-md rounded-xl border border-amber-200 bg-white p-6 text-center shadow-sm dark:border-amber-800 dark:bg-gray-800">
+          <div className="mb-3 text-4xl">⚠️</div>
+          <h1 className="mb-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+            Configuration required
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Set <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">VITE_SUPABASE_URL</code>{' '}
+            and{' '}
+            <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">VITE_SUPABASE_ANON_KEY</code>{' '}
+            in your Netlify environment variables, then redeploy.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -177,17 +197,18 @@ function App() {
         </header>
 
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-          <ExpenseForm userId={userId} onAddExpense={addExpense} />
+          <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
           <Dashboard
             userId={userId}
             expenses={expenses}
             budgets={budgets}
+            expensesLoading={expensesLoading}
             onSetBudgetLimit={setBudgetLimit}
           />
           <ExpenseList
             userId={userId}
             expenses={expenses}
-            onDeleteExpense={deleteExpense}
+            onDeleteExpense={handleDeleteExpense}
           />
         </main>
 
