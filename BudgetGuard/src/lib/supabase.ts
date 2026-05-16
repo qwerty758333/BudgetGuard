@@ -33,6 +33,54 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_users: {
+        Row: {
+          id: string
+          user_id: string
+          email: string | null
+          role: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email?: string | null
+          role?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email?: string | null
+          role?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          id: string
+          event_type: string
+          event_data: Record<string, unknown>
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_type: string
+          event_data: Record<string, unknown>
+          user_id?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_type?: string
+          event_data?: Record<string, unknown>
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -41,18 +89,29 @@ export type Database = {
   }
 }
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient<Database>(
-  supabaseUrl ?? '',
-  supabaseAnonKey ?? '',
-)
+/** Supabase project URL only (no /rest/v1 suffix). */
+function normalizeSupabaseUrl(url: string | undefined): string {
+  if (!url) return ''
+  return url.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '')
+}
 
-if (!supabaseUrl || !supabaseAnonKey) {
+const supabaseUrl = normalizeSupabaseUrl(rawSupabaseUrl)
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+
+if (isSupabaseConfigured && /\/rest\/v1/i.test(supabaseUrl)) {
   throw new Error(
-    'Missing Supabase env vars: set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local',
+    'VITE_SUPABASE_URL must be the project root (e.g. https://YOUR_PROJECT.supabase.co), not a /rest/v1 path.',
   )
 }
 
+const supabase = createClient<Database>(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder',
+)
+
+export { supabase }
 export default supabase

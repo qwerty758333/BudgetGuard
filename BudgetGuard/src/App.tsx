@@ -1,27 +1,24 @@
 import { useEffect, useState } from 'react'
+import { Route, Routes } from 'react-router-dom'
 import AuthPage from './components/AuthPage'
 import { useBadges } from './hooks/useBadges'
 import { BadgeGallery } from './components/BadgeGallery'
 import { Celebration } from './components/Celebration'
+import { AdminAnalytics } from './pages/AdminAnalytics'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
 import { BudgetSettings } from './components/BudgetSettings'
 import { useAuth } from './hooks/useAuth'
+import { useExpenses } from './hooks/useExpenses'
+import type { Category } from './types'
+import { isSupabaseConfigured } from './lib/supabase'
+import { trackEvent } from './services/analyticsService'
 import {
   loadFromLocalStorage,
   saveToLocalStorage,
   DEFAULT_BUDGETS,
 } from './utils/storage'
-
-export interface Expense {
-  id: number
-  amount: number
-  category: string
-  date: string
-  notes: string
-  timestamp: number
-}
 
 export interface Budgets {
   [category: string]: number
@@ -64,9 +61,15 @@ function SunIcon() {
   )
 }
 
-function App() {
+function BudgetGuardApp() {
   const { session, user, loading, logout } = useAuth()
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const {
+    expenses,
+    loading: expensesLoading,
+    addExpense,
+    deleteExpense,
+  } = useExpenses(user?.id)
+
   const [budgets, setBudgets] = useState<Budgets>({ ...DEFAULT_BUDGETS })
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -75,9 +78,6 @@ function App() {
 
   useEffect(() => {
     const saved = loadFromLocalStorage()
-    if (saved.expenses.length > 0) {
-      setExpenses(saved.expenses)
-    }
     setBudgets(saved.budgets)
     if (saved.darkMode) {
       setDarkMode(saved.darkMode)
@@ -85,28 +85,28 @@ function App() {
   }, [])
 
   useEffect(() => {
-    saveToLocalStorage(expenses, budgets, darkMode)
-  }, [expenses, budgets, darkMode])
+    saveToLocalStorage(budgets, darkMode)
+  }, [budgets, darkMode])
 
-  const addExpense = (
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  const handleAddExpense = async (
     amount: number,
     category: string,
     date: string,
     notes: string,
   ) => {
-    const newExpense: Expense = {
-      id: Date.now(),
-      amount,
-      category,
-      date,
-      notes,
-      timestamp: Date.now(),
-    }
-    setExpenses((prev) => [...prev, newExpense])
-  }
+    if (!user) return
 
-  const deleteExpense = (id: number) => {
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
+    await addExpense({
+      user_id: user.id,
+      amount,
+      category: category as Category,
+      date,
+      notes: notes || null,
+    })
   }
 
   const setBudgetLimit = (category: string, amount: number) => {
@@ -118,6 +118,25 @@ function App() {
 
   const handleSaveBudget = (category: string, amount: number) => {
     setBudgetLimit(category, amount)
+  }
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
+        <div className="max-w-md rounded-xl border border-amber-200 bg-white p-6 text-center shadow-sm dark:border-amber-800 dark:bg-gray-800">
+          <div className="mb-3 text-4xl">⚠️</div>
+          <h1 className="mb-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+            Configuration required
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Set <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">VITE_SUPABASE_URL</code>{' '}
+            and{' '}
+            <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">VITE_SUPABASE_ANON_KEY</code>{' '}
+            in your Netlify environment variables, then redeploy.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -139,12 +158,48 @@ function App() {
 
   const userId = user!.id
 
+  const handleDarkModeToggle = async () => {
+    await trackEvent(
+      'dark_mode_toggled',
+      {
+        enabled: !darkMode,
+        timestamp: new Date().toISOString(),
+      },
+      userId,
+    )
+    setDarkMode(!darkMode)
+  }
+
+  const handleDeleteExpense = async (id: string) => {
+    const expense = expenses.find((item) => item.id === id)
+    if (expense) {
+      await trackEvent(
+        'expense_deleted',
+        {
+          expenseId: id,
+          amount: expense.amount,
+          category: expense.category,
+          timestamp: new Date().toISOString(),
+        },
+        userId,
+      )
+    }
+    await deleteExpense(id)
+  }
+
   return (
     <div className={darkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
         <header className="flex items-center justify-between bg-blue-600 px-4 py-4 text-white shadow-md dark:bg-blue-900 sm:px-6">
           <h1 className="text-2xl font-bold sm:text-3xl">BudgetGuard</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <a
+              href="/admin/analytics"
+              className="rounded-lg border border-white/30 bg-white/10 px-2 py-2 text-xs font-medium text-white transition hover:bg-white/20 sm:px-3 sm:text-sm"
+            >
+              📊 <span className="hidden sm:inline">Admin Analytics</span>
+              <span className="sm:hidden">Admin</span>
+            </a>
             <button
               type="button"
               onClick={() => setIsSettingsOpen(true)}
@@ -155,7 +210,7 @@ function App() {
             </button>
             <button
               type="button"
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => void handleDarkModeToggle()}
               className="flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
               aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
@@ -190,12 +245,13 @@ function App() {
             userId={userId}
             expenses={expenses}
             budgets={budgets}
+            expensesLoading={expensesLoading}
             onSetBudgetLimit={setBudgetLimit}
           />
           <ExpenseList
             userId={userId}
             expenses={expenses}
-            onDeleteExpense={deleteExpense}
+            onDeleteExpense={handleDeleteExpense}
           />
           <div className="mt-12">
             <BadgeGallery earnedBadges={earnedBadges} />
@@ -210,6 +266,15 @@ function App() {
         />
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/admin/analytics" element={<AdminAnalytics />} />
+      <Route path="/*" element={<BudgetGuardApp />} />
+    </Routes>
   )
 }
 

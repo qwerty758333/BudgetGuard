@@ -8,12 +8,13 @@ export type Category =
   | 'Other'
 
 export interface Expense {
-  id: number
+  id: string
+  user_id: string
   amount: number
   category: Category
   date: string
-  notes: string
-  timestamp: number
+  notes: string | null
+  created_at: string
 }
 
 export interface Budget {
