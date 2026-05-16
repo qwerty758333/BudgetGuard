@@ -33,6 +33,105 @@ export type Database = {
         }
         Relationships: []
       }
+      budgets: {
+        Row: {
+          id: string
+          user_id: string
+          category: string
+          amount: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          category: string
+          amount: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          category?: string
+          amount?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      badges: {
+        Row: {
+          id: string
+          user_id: string
+          badge_id: string
+          name: string
+          emoji: string
+          description: string
+          unlocked: boolean
+          unlocked_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          badge_id: string
+          name: string
+          emoji: string
+          description: string
+          unlocked?: boolean
+          unlocked_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          badge_id?: string
+          name?: string
+          emoji?: string
+          description?: string
+          unlocked?: boolean
+          unlocked_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      challenges: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          category: string | null
+          target_amount: number
+          current_amount: number
+          completed: boolean
+          week_start: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          category?: string | null
+          target_amount: number
+          current_amount?: number
+          completed?: boolean
+          week_start: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          category?: string | null
+          target_amount?: number
+          current_amount?: number
+          completed?: boolean
+          week_start?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       admin_users: {
         Row: {
           id: string

@@ -1,113 +1,134 @@
-import { useEffect, useRef, useState } from 'react';
+// Supabase `badges` table requires a UNIQUE constraint on (user_id, badge_id) for upsert onConflict.
 
-import { checkBadges, type Budgets, type Expense } from '../utils/badges';
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
-
-export interface UseBadgesExpense {
-
-id: string | number;
-
-amount: number;
-
-category: string;
-
-date: string;
-
-notes: string | null;
-
+export interface Badge {
+  id: string
+  user_id: string
+  badge_id: string
+  name: string
+  emoji: string
+  description: string
+  unlocked: boolean
+  unlocked_at: string | null
+  created_at: string
 }
 
+const DEFAULT_BADGES = [
+  {
+    badge_id: 'budget_master',
+    name: 'Budget Master',
+    emoji: '🏆',
+    description: 'Stay under your total budget for a week',
+  },
+  {
+    badge_id: 'meal_prepper',
+    name: 'Meal Prepper',
+    emoji: '🍱',
+    description: 'Keep food spending under $100',
+  },
+  {
+    badge_id: 'minimalist',
+    name: 'Minimalist',
+    emoji: '🧘',
+    description: 'Keep entertainment spending under $50',
+  },
+  {
+    badge_id: 'early_bird',
+    name: 'Early Bird',
+    emoji: '🌅',
+    description: 'Log an expense before 9am',
+  },
+  {
+    badge_id: 'streak_3',
+    name: 'On a Roll',
+    emoji: '🔥',
+    description: 'Log expenses 3 days in a row',
+  },
+] as const
 
-export type UseBadgesBudgets = Record<string, number>;
+export function useBadges(userId: string | undefined) {
+  const [badges, setBadges] = useState<Badge[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
+  async function initialiseBadges() {
+    if (!userId) return
 
-export interface UseBadgesResult {
+    const rows = DEFAULT_BADGES.map((b) => ({
+      ...b,
+      user_id: userId,
+      unlocked: false,
+      unlocked_at: null,
+    }))
 
-earnedBadges: string[];
+    const { error: upsertError } = await supabase
+      .from('badges')
+      .upsert(rows, { onConflict: 'user_id,badge_id' })
 
-newlyEarned: string[];
+    if (upsertError) {
+      setError(upsertError.message)
+    }
+  }
 
-}
+  async function fetchBadges() {
+    if (!userId) return
 
+    setLoading(true)
+    setError(null)
 
-function toCheckBudgets(budgets: UseBadgesBudgets): Budgets {
+    const { data, error: fetchError } = await supabase
+      .from('badges')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
 
-return {
+    if (fetchError) {
+      setError(fetchError.message)
+      setLoading(false)
+    } else if (data && data.length === 0) {
+      await initialiseBadges()
+      await fetchBadges()
+    } else {
+      setBadges(data as Badge[])
+      setLoading(false)
+    }
+  }
 
-total: Object.values(budgets).reduce((sum, amount) => sum + amount, 0),
+  useEffect(() => {
+    if (userId) {
+      void fetchBadges()
+    } else {
+      setBadges([])
+      setLoading(false)
+    }
+  }, [userId])
 
-};
+  async function unlockBadge(badgeId: string) {
+    if (!userId) return
 
-}
+    const now = new Date().toISOString()
 
+    const { error: unlockError } = await supabase
+      .from('badges')
+      .update({ unlocked: true, unlocked_at: now })
+      .eq('user_id', userId)
+      .eq('badge_id', badgeId)
+      .eq('unlocked', false)
 
-export function useBadges(
+    if (unlockError) {
+      setError(unlockError.message)
+    } else {
+      setBadges((prev) =>
+        prev.map((b) =>
+          b.badge_id === badgeId
+            ? { ...b, unlocked: true, unlocked_at: now }
+            : b,
+        ),
+      )
+    }
+  }
 
-expenses: UseBadgesExpense[],
-
-budgets: UseBadgesBudgets,
-
-): UseBadgesResult {
-
-const [earnedBadges, setEarnedBadges] = useState<string[]>([]);
-
-const [newlyEarned, setNewlyEarned] = useState<string[]>([]);
-
-const previousBadgesRef = useRef<string[]>([]);
-
-const isInitializedRef = useRef(false);
-
-
-useEffect(() => {
-
-const currentEarned = checkBadges(expenses as Expense[], toCheckBudgets(budgets));
-
-const previousEarned = previousBadgesRef.current;
-
-
-if (isInitializedRef.current) {
-
-const newBadges = currentEarned.filter((id) => !previousEarned.includes(id));
-
-if (newBadges.length > 0) {
-
-setNewlyEarned(newBadges);
-
-}
-
-}
-
-
-setEarnedBadges(currentEarned);
-
-previousBadgesRef.current = currentEarned;
-
-isInitializedRef.current = true;
-
-}, [expenses, budgets]);
-
-
-useEffect(() => {
-
-if (newlyEarned.length === 0) {
-
-return;
-
-}
-
-
-const timer = window.setTimeout(() => {
-
-setNewlyEarned([]);
-
-}, 3000);
-
-
-return () => window.clearTimeout(timer);
-
-}, [newlyEarned]);
-
-
-return { earnedBadges, newlyEarned };
-
+  return { badges, loading, error, unlockBadge, refetch: fetchBadges }
 }
