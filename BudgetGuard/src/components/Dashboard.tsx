@@ -2,12 +2,14 @@ import { StatCard } from './StatCard'
 import type { Expense, Budgets } from '../App'
 
 interface DashboardProps {
+  userId: string
   expenses: Expense[]
   budgets: Budgets
   onSetBudgetLimit?: (category: string, amount: number) => void
 }
 
-export function Dashboard({ expenses, budgets }: DashboardProps) {
+export function Dashboard({ userId, expenses, budgets }: DashboardProps) {
+  void userId
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0)
   const totalBudget = Object.values(budgets).reduce((sum, n) => sum + n, 0)
   const remaining = totalBudget - totalSpent
