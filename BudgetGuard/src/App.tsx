@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import AuthPage from './components/AuthPage'
+import AnalyticsDashboard from './components/AnalyticsDashboard'
 import { BadgeGallery } from './components/BadgeGallery'
 import { Celebration } from './components/Celebration'
 import { AdminAnalytics } from './pages/AdminAnalytics'
@@ -71,7 +72,7 @@ function SunIcon() {
 }
 
 function BudgetGuardApp() {
-  const { session, user, loading, logout } = useAuth()
+  const { session, user, loading, logout, role, isAdmin } = useAuth()
   const {
     expenses,
     loading: expensesLoading,
@@ -101,6 +102,7 @@ function BudgetGuardApp() {
 
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics'>('dashboard')
   const [celebrationBadgeName, setCelebrationBadgeName] = useState<string | null>(null)
   const prevUnlockedBadgeIdsRef = useRef<string[]>([])
 
@@ -176,6 +178,7 @@ function BudgetGuardApp() {
   void updateChallengeProgress
   void deleteChallenge
   void budgetsLoading
+  void role
 
   const handleAddExpense = async (
     amount: number,
@@ -271,6 +274,14 @@ function BudgetGuardApp() {
         <header className="flex items-center justify-between bg-blue-600 px-4 py-4 text-white shadow-md dark:bg-blue-900 sm:px-6">
           <h1 className="text-2xl font-bold sm:text-3xl">BudgetGuard</h1>
           <div className="flex flex-wrap items-center justify-end gap-2">
+            {isAdmin && user?.email && (
+              <span className="hidden text-sm text-blue-100 sm:inline">{user.email}</span>
+            )}
+            {isAdmin && (
+              <span className="ml-2 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                Admin
+              </span>
+            )}
             <a
               href="/admin/analytics"
               className="rounded-lg border border-white/30 bg-white/10 px-2 py-2 text-xs font-medium text-white transition hover:bg-white/20 sm:px-3 sm:text-sm"
@@ -314,26 +325,63 @@ function BudgetGuardApp() {
           </div>
         </header>
 
+        {isAdmin && (
+          <nav className="container mx-auto flex max-w-4xl gap-2 px-4 pt-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab('dashboard')}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'dashboard'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <span>📊</span>
+              <span>Dashboard</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('analytics')}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'analytics'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <span>👑</span>
+              <span>Analytics</span>
+            </button>
+          </nav>
+        )}
+
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-          {celebrationBadgeName && (
-            <Celebration show={true} badgeName={celebrationBadgeName} />
+          {activeTab === 'dashboard' && (
+            <>
+              {celebrationBadgeName && (
+                <Celebration show={true} badgeName={celebrationBadgeName} />
+              )}
+              <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
+              <Dashboard
+                userId={userId}
+                expenses={expenses}
+                budgets={budgets}
+                expensesLoading={expensesLoading}
+                onSetBudgetLimit={handleSaveBudget}
+              />
+              <ExpenseList
+                userId={userId}
+                expenses={expenses}
+                onDeleteExpense={handleDeleteExpense}
+              />
+              <div className="mt-12">
+                <BadgeGallery earnedBadges={earnedBadges} />
+              </div>
+            </>
           )}
-          <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
-          <Dashboard
-            userId={userId}
-            expenses={expenses}
-            budgets={budgets}
-            expensesLoading={expensesLoading}
-            onSetBudgetLimit={handleSaveBudget}
-          />
-          <ExpenseList
-            userId={userId}
-            expenses={expenses}
-            onDeleteExpense={handleDeleteExpense}
-          />
-          <div className="mt-12">
-            <BadgeGallery earnedBadges={earnedBadges} />
-          </div>
+
+          {isAdmin && activeTab === 'analytics' && (
+            <AnalyticsDashboard isAdmin={isAdmin} />
+          )}
         </main>
 
         <BudgetSettings

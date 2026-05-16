@@ -77,8 +77,8 @@ async function hasAdminUsersRecord(user: User): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from('admin_users')
-      .select('user_id')
-      .eq('user_id', user.id)
+      .select('id')
+      .eq('id', user.id)
       .maybeSingle()
 
     if (error) {
