@@ -13,7 +13,7 @@ export function Dashboard({ expenses, budgets }: DashboardProps) {
   const remaining = totalBudget - totalSpent
   const categoryCount = new Set(expenses.map((e) => e.category)).size
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="w-full">
       <header className="mb-6 sm:mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
           Dashboard
@@ -45,6 +45,6 @@ export function Dashboard({ expenses, budgets }: DashboardProps) {
           </p>
         </article>
       </section>
-    </main>
+    </div>
   )
 }
