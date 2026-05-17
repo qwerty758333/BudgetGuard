@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { AnalyticsTracker } from '../utils/analyticsTracker'
+import { useEffect, useMemo, useState } from 'react'
+import { tracker } from '../utils/analyticsTracker'
 import { StatCard } from './StatCard'
 import { BADGES } from '../utils/badges'
 import type { Expense } from '../types'
@@ -33,18 +33,21 @@ export function PrivateAnalyticsDashboard({
 }: PrivateAnalyticsDashboardProps) {
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const analyticsTracker = useMemo(() => {
-    void refreshKey
-    const instance = new AnalyticsTracker(userId)
-    return instance
-  }, [userId, refreshKey])
+  useEffect(() => {
+    tracker.setUserId(userId)
+  }, [userId])
 
-  const stats = analyticsTracker.getStats()
+  const stats = useMemo(() => {
+    void refreshKey
+    tracker.setUserId(userId)
+    tracker.refreshFromStorage()
+    return tracker.getStats()
+  }, [userId, refreshKey, expenses.length])
   const mostCommonType =
     Object.entries(stats.byType).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—'
 
   const handleExport = () => {
-    const blob = new Blob([JSON.stringify(analyticsTracker.getEvents(), null, 2)], {
+    const blob = new Blob([JSON.stringify(tracker.getEvents(), null, 2)], {
       type: 'application/json',
     })
     const url = URL.createObjectURL(blob)
@@ -57,7 +60,7 @@ export function PrivateAnalyticsDashboard({
 
   const handleClear = () => {
     if (!window.confirm('Clear your local analytics history?')) return
-    analyticsTracker.clearEvents()
+    tracker.clearEvents()
     setRefreshKey((key) => key + 1)
   }
 

@@ -407,6 +407,7 @@ function BudgetGuardApp() {
               <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
               <Dashboard
                 userId={userId}
+                userEmail={user.email}
                 expenses={expenses}
                 budgets={budgets}
                 earnedBadges={earnedBadges}

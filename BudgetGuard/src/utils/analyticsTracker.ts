@@ -24,7 +24,22 @@ export class AnalyticsTracker {
   setUserId(userId: string | undefined): void {
     if (this.userId === userId) return
     this.userId = userId
-    this.events = loadAnalyticsEvents(userId)
+    this.events = loadAnalyticsEvents(userId).map((event) => ({
+      type: event.type,
+      data: event.data,
+      timestamp: event.timestamp,
+      userId: event.userId,
+    }))
+  }
+
+  /** Re-read events from localStorage (e.g. after another tab or tracker write). */
+  refreshFromStorage(): void {
+    this.events = loadAnalyticsEvents(this.userId).map((event) => ({
+      type: event.type,
+      data: event.data,
+      timestamp: event.timestamp,
+      userId: event.userId,
+    }))
   }
 
   trackEvent(type: string, data: object, userId?: string): void {

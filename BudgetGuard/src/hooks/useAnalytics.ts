@@ -17,7 +17,7 @@ export interface AnalyticsData {
 
 export function useAnalytics(isAdmin: boolean) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(isAdmin)
   const [error, setError] = useState<string | null>(null)
 
   async function fetchAnalytics() {
