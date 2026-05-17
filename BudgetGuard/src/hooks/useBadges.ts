@@ -17,6 +17,8 @@ export interface Badge {
   created_at: string
 }
 
+const DB_OK_KEY = 'budgetguard_badges_db_ok'
+
 const DEFAULT_BADGES = [
   {
     badge_id: 'budget_master',
@@ -50,15 +52,39 @@ const DEFAULT_BADGES = [
   },
 ] as const
 
+function readDbAvailableFlag(): boolean {
+  try {
+    return sessionStorage.getItem(DB_OK_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+function writeDbAvailableFlag(ok: boolean): void {
+  try {
+    sessionStorage.setItem(DB_OK_KEY, ok ? '1' : '0')
+  } catch {
+    // ignore
+  }
+}
+
 export function useBadges(userId: string | undefined) {
   const [badges, setBadges] = useState<Badge[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [dbAvailable, setDbAvailable] = useState(true)
+  const [dbAvailable, setDbAvailable] = useState(readDbAvailableFlag)
   const initAttemptedRef = useRef(false)
+  const skipRemoteRef = useRef(!readDbAvailableFlag())
+
+  const markDbUnavailable = useCallback((message: string) => {
+    skipRemoteRef.current = true
+    setDbAvailable(false)
+    writeDbAvailableFlag(false)
+    setError(message)
+  }, [])
 
   const initialiseBadges = useCallback(async (): Promise<boolean> => {
-    if (!userId) return false
+    if (!userId || skipRemoteRef.current) return false
 
     const rows = DEFAULT_BADGES.map((b) => ({
       ...b,
@@ -67,32 +93,23 @@ export function useBadges(userId: string | undefined) {
       unlocked_at: null,
     }))
 
-    const { error: upsertError } = await supabase
-      .from('badges')
-      .upsert(rows, { onConflict: 'user_id,badge_id' })
-
-    if (!upsertError) {
-      return true
-    }
-
-    // Fallback when unique (user_id, badge_id) is missing — insert rows individually.
     for (const row of rows) {
       const { error: insertError } = await supabase
         .from('badges')
         .insert(row as BadgeInsert)
+
       if (
         insertError &&
         insertError.code !== '23505' &&
         !insertError.message.toLowerCase().includes('duplicate')
       ) {
-        setError(insertError.message)
-        setDbAvailable(false)
+        markDbUnavailable(insertError.message)
         return false
       }
     }
 
     return true
-  }, [userId])
+  }, [userId, markDbUnavailable])
 
   const fetchBadges = useCallback(async () => {
     if (!userId) return
@@ -100,21 +117,38 @@ export function useBadges(userId: string | undefined) {
     setLoading(true)
     setError(null)
 
-    const { data, error: fetchError } = await supabase
+    if (skipRemoteRef.current) {
+      setBadges([])
+      setLoading(false)
+      return
+    }
+
+    const byCreatedAt = await supabase
       .from('badges')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
 
+    let fetchResult = byCreatedAt
+    if (byCreatedAt.error) {
+      fetchResult = await supabase
+        .from('badges')
+        .select('*')
+        .eq('user_id', userId)
+    }
+
+    const { data, error: fetchError } = fetchResult
+
     if (fetchError) {
-      setError(fetchError.message)
+      markDbUnavailable(fetchError.message)
       setBadges([])
-      setDbAvailable(false)
       setLoading(false)
       return
     }
 
     setDbAvailable(true)
+    writeDbAvailableFlag(true)
+    skipRemoteRef.current = false
 
     if (data && data.length > 0) {
       setBadges(data as Badge[])
@@ -125,12 +159,11 @@ export function useBadges(userId: string | undefined) {
     if (!initAttemptedRef.current) {
       initAttemptedRef.current = true
       const created = await initialiseBadges()
-      if (created) {
+      if (created && !skipRemoteRef.current) {
         const { data: retryData, error: retryError } = await supabase
           .from('badges')
           .select('*')
           .eq('user_id', userId)
-          .order('created_at', { ascending: true })
 
         if (!retryError && retryData) {
           setBadges(retryData as Badge[])
@@ -139,7 +172,7 @@ export function useBadges(userId: string | undefined) {
     }
 
     setLoading(false)
-  }, [userId, initialiseBadges])
+  }, [userId, initialiseBadges, markDbUnavailable])
 
   useEffect(() => {
     initAttemptedRef.current = false
@@ -154,7 +187,7 @@ export function useBadges(userId: string | undefined) {
 
   const unlockBadge = useCallback(
     async (badgeId: string) => {
-      if (!userId || !dbAvailable) return
+      if (!userId || !dbAvailable || skipRemoteRef.current) return
 
       const now = new Date().toISOString()
 
@@ -166,7 +199,7 @@ export function useBadges(userId: string | undefined) {
         .eq('unlocked', false)
 
       if (unlockError) {
-        setError(unlockError.message)
+        markDbUnavailable(unlockError.message)
       } else {
         setBadges((prev) =>
           prev.map((b) =>
@@ -177,7 +210,7 @@ export function useBadges(userId: string | undefined) {
         )
       }
     },
-    [userId, dbAvailable],
+    [userId, dbAvailable, markDbUnavailable],
   )
 
   return { badges, loading, error, dbAvailable, unlockBadge, refetch: fetchBadges }

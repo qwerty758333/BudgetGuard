@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+function isExpensesRemoteAvailable(): boolean {
+  try {
+    return sessionStorage.getItem('budgetguard_expenses_db_ok') !== '0'
+  } catch {
+    return true
+  }
+}
+
 export interface AnalyticsData {
   totalUsers: number
   totalExpenses: number
@@ -26,6 +34,12 @@ export function useAnalytics(isAdmin: boolean) {
     setError(null)
 
     try {
+      if (!isExpensesRemoteAvailable()) {
+        throw new Error(
+          'Expense table is not available. Run supabase/fix_all.sql in Supabase SQL Editor, then hard-refresh the app.',
+        )
+      }
+
       let expensesResult = await supabase
         .from('expenses')
         .select('amount, category, created_at')
@@ -34,6 +48,10 @@ export function useAnalytics(isAdmin: boolean) {
         expensesResult = await supabase
           .from('expenses')
           .select('amount, category, date')
+      }
+
+      if (expensesResult.error) {
+        expensesResult = await supabase.from('expenses').select('amount, category')
       }
 
       if (expensesResult.error) throw expensesResult.error
