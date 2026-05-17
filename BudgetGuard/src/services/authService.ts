@@ -37,6 +37,25 @@ export const supabase = createClient<Database>(
   supabaseKey || 'placeholder',
 )
 
+/** Judge/demo login — override via VITE_DEMO_EMAIL and VITE_DEMO_PASSWORD in .env.local */
+export const DEMO_CREDENTIALS = {
+  email: (import.meta.env.VITE_DEMO_EMAIL ?? 'demo@budgetguard.app').trim().toLowerCase(),
+  password: import.meta.env.VITE_DEMO_PASSWORD ?? 'demo123456',
+  username: 'demo_judge',
+} as const
+
+function matchesDemoCredentials(email: string, password: string): boolean {
+  return email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password
+}
+
+function isInvalidLoginError(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes('invalid login credentials') ||
+    normalized.includes('invalid email or password')
+  )
+}
+
 /**
  * Maps a Supabase Auth user to {@link AuthUser}.
  */
@@ -179,10 +198,43 @@ export async function logIn(email: string, password: string): Promise<AuthRespon
   }
 
   try {
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+    let { data, error: signInError } = await supabase.auth.signInWithPassword({
       email: trimmedEmail,
       password,
     })
+
+    // First-time demo login: create the judge account, then sign in again.
+    if (
+      signInError &&
+      matchesDemoCredentials(trimmedEmail, password) &&
+      isInvalidLoginError(signInError.message)
+    ) {
+      const provisioned = await signUp(
+        trimmedEmail,
+        password,
+        DEMO_CREDENTIALS.username,
+      )
+
+      if (provisioned.success && provisioned.user) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (session?.user) {
+          return {
+            success: true,
+            error: null,
+            user: toAuthUser(session.user),
+          }
+        }
+      }
+
+      const retry = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
+      })
+      data = retry.data
+      signInError = retry.error
+    }
 
     if (signInError) {
       return {

@@ -1,9 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { logIn } from '../services/authService'
-
-const DEMO_EMAIL = 'demo@budgetguard.app'
-const DEMO_PASSWORD = 'demo123456'
+import { DEMO_CREDENTIALS, logIn } from '../services/authService'
 const REMEMBER_ME_KEY = 'budgetguard_remember_email'
 
 const inputClassName =
@@ -65,8 +62,8 @@ export function Login() {
   })
 
   const fillDemoCredentials = () => {
-    setEmail(DEMO_EMAIL)
-    setPassword(DEMO_PASSWORD)
+    setEmail(DEMO_CREDENTIALS.email)
+    setPassword(DEMO_CREDENTIALS.password)
     setError(null)
   }
 
@@ -124,14 +121,20 @@ export function Login() {
         >
           <p className="font-semibold">Demo credentials (judges)</p>
           <p className="mt-1">
-            Email: <code className="rounded bg-white/60 px-1 dark:bg-gray-900/50">{DEMO_EMAIL}</code>
+            Email:{' '}
+            <code className="rounded bg-white/60 px-1 dark:bg-gray-900/50">
+              {DEMO_CREDENTIALS.email}
+            </code>
           </p>
           <p>
             Password:{' '}
-            <code className="rounded bg-white/60 px-1 dark:bg-gray-900/50">{DEMO_PASSWORD}</code>
+            <code className="rounded bg-white/60 px-1 dark:bg-gray-900/50">
+              {DEMO_CREDENTIALS.password}
+            </code>
           </p>
           <p className="mt-2 text-xs opacity-90">
-            Create this account via Sign up first, or use your own registered email.
+            The demo account is created automatically on first login. You can also use Sign up
+            with your own email.
           </p>
           <button
             type="button"
