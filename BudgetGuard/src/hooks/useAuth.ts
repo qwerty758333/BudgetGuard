@@ -1,62 +1,59 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
-import { fetchAdminRoleFromDb } from '../utils/adminAccess'
+import {
+  getCurrentUser,
+  logOut,
+  onAuthStateChange,
+  type AuthUser,
+} from '../services/authService'
+import { resolveIsAdminForAuthUser } from '../utils/adminAccess'
 
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState<'user' | 'admin' | null>(null)
 
-  const applyRole = useCallback(async (authUser: User | null) => {
+  const applyRole = useCallback(async (authUser: AuthUser | null) => {
     if (!authUser) {
       setRole(null)
       return
     }
-
-    const resolved = await fetchAdminRoleFromDb(authUser)
+    const resolved = await resolveIsAdminForAuthUser(authUser)
     setRole(resolved)
   }, [])
 
   useEffect(() => {
     let mounted = true
 
-    void supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+    void getCurrentUser().then((current) => {
       if (!mounted) return
-      setSession(initialSession)
-      if (initialSession?.user) {
-        void applyRole(initialSession.user)
-      }
+      setUser(current)
+      void applyRole(current)
       setLoading(false)
     })
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession)
-      if (nextSession?.user) {
-        void applyRole(nextSession.user)
-      } else {
-        setRole(null)
-      }
+    const unsubscribe = onAuthStateChange((nextUser) => {
+      if (!mounted) return
+      setUser(nextUser)
+      void applyRole(nextUser)
       setLoading(false)
     })
 
     return () => {
       mounted = false
-      subscription.unsubscribe()
+      unsubscribe()
     }
   }, [applyRole])
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut()
+    await logOut()
+    setUser(null)
+    setRole(null)
   }, [])
 
-  const user: User | null = session?.user ?? null
   const isAdmin = role === 'admin'
 
   return {
-    session,
+    session: user,
     user,
     loading,
     logout,

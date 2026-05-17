@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js'
+import type { AuthUser } from './localAuthStore'
 import { supabase } from '../lib/supabase'
 
 function getAdminEmailsFromEnv(): string[] {
@@ -155,6 +156,29 @@ export async function resolveIsAdmin(user: User): Promise<boolean> {
   }
 
   return hasAdminUsersRecord(user)
+}
+
+function hasAdminEmailForAuthUser(user: { email: string }): boolean {
+  const adminEmails = getAdminEmailsFromEnv()
+  const normalized = user.email.trim().toLowerCase()
+  return normalized.length > 0 && adminEmails.includes(normalized)
+}
+
+function hasAdminIdForAuthUser(user: { id: string }): boolean {
+  const adminIds =
+    import.meta.env.VITE_ADMIN_USER_IDS?.split(',').map((id: string) => id.trim()) ??
+    []
+  return adminIds.includes(user.id)
+}
+
+/** Admin role for localStorage auth (env email/id only — no DB required). */
+export async function resolveIsAdminForAuthUser(
+  user: AuthUser,
+): Promise<'user' | 'admin'> {
+  if (hasAdminEmailForAuthUser(user) || hasAdminIdForAuthUser(user)) {
+    return 'admin'
+  }
+  return 'user'
 }
 
 /** Maps Supabase auth errors to clearer admin-login messages. */

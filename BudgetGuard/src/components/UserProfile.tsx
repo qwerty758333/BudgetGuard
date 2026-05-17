@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getCurrentUser,
+  getProfileForUser,
   logOut,
-  supabase,
   updateUserProfile,
   type AuthUser,
 } from '../services/authService'
@@ -79,30 +79,6 @@ function LogOutIcon({ className }: { className?: string }) {
   )
 }
 
-async function fetchProfileUsername(userId: string, fallbackEmail: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('users')
-    .select('username')
-    .eq('id', userId)
-    .maybeSingle()
-
-  if (!error && data?.username) {
-    return data.username
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  const metadataUsername = user?.user_metadata?.username
-  if (typeof metadataUsername === 'string' && metadataUsername.trim()) {
-    return metadataUsername.trim()
-  }
-
-  const localPart = fallbackEmail.split('@')[0]
-  return localPart || 'user'
-}
-
 export function UserProfile() {
   const navigate = useNavigate()
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
@@ -127,7 +103,7 @@ export function UserProfile() {
       return
     }
 
-    const profileUsername = await fetchProfileUsername(user.id, user.email)
+    const profileUsername = getProfileForUser(user.id, user.email)
     setAuthUser(user)
     setUsername(profileUsername)
     setEditUsername(profileUsername)

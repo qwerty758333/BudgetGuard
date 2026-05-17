@@ -1,45 +1,33 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-
-export interface BudgetRow {
-  id: string
-  user_id: string
-  category: string
-  amount: number
-  created_at: string
-  updated_at: string
-}
+import { useCallback, useEffect, useState } from 'react'
+import { DEFAULT_BUDGETS, getUserBudgets, saveUserBudgets } from '../utils/storage'
 
 export type BudgetMap = Record<string, number>
 
+/** Budget limits stored per user in localStorage (no Supabase `budgets` table). */
 export function useBudgets(userId: string | undefined) {
   const [budgets, setBudgets] = useState<BudgetMap>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function fetchBudgets() {
+  const fetchBudgets = useCallback(async () => {
     if (!userId) return
 
     setLoading(true)
     setError(null)
 
-    const { data, error: fetchError } = await supabase
-      .from('budgets')
-      .select('*')
-      .eq('user_id', userId)
-
-    if (fetchError) {
-      setError(fetchError.message)
-    } else {
-      const map: BudgetMap = {}
-      data?.forEach((row: BudgetRow) => {
-        map[row.category] = row.amount
-      })
-      setBudgets(map)
+    try {
+      const stored = getUserBudgets(userId)
+      const hasStored = Object.keys(stored).length > 0
+      setBudgets(hasStored ? stored : { ...DEFAULT_BUDGETS })
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not load budget settings',
+      )
+      setBudgets({ ...DEFAULT_BUDGETS })
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
-  }
+  }, [userId])
 
   useEffect(() => {
     if (userId) {
@@ -48,41 +36,21 @@ export function useBudgets(userId: string | undefined) {
       setBudgets({})
       setLoading(false)
     }
-  }, [userId])
+  }, [userId, fetchBudgets])
 
-  async function setBudget(category: string, amount: number) {
-    if (!userId) return
+  const setBudget = useCallback(
+    async (category: string, amount: number) => {
+      if (!userId) return
 
-    setError(null)
-
-    const { data: existing } = await supabase
-      .from('budgets')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('category', category)
-      .single()
-
-    if (existing) {
-      const { error: updateError } = await supabase
-        .from('budgets')
-        .update({ amount, updated_at: new Date().toISOString() })
-        .eq('id', existing.id)
-
-      if (updateError) {
-        setError(updateError.message)
-      }
-    } else {
-      const { error: insertError } = await supabase
-        .from('budgets')
-        .insert([{ user_id: userId, category, amount }])
-
-      if (insertError) {
-        setError(insertError.message)
-      }
-    }
-
-    setBudgets((prev) => ({ ...prev, [category]: amount }))
-  }
+      setError(null)
+      setBudgets((prev) => {
+        const next = { ...prev, [category]: amount }
+        saveUserBudgets(userId, next)
+        return next
+      })
+    },
+    [userId],
+  )
 
   return { budgets, loading, error, setBudget, refetch: fetchBudgets }
 }

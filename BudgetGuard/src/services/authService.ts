@@ -1,462 +1,459 @@
-import { createClient, type AuthChangeEvent, type User } from '@supabase/supabase-js'
 import type { Database } from '../lib/supabase'
 
-/** Authenticated user exposed to the app layer. */
-export interface AuthUser {
-  id: string
-  email: string
-  created_at: string
-}
+import { createClient } from '@supabase/supabase-js'
+
+import {
+
+  ensureDemoLocalUser,
+
+  getLocalSessionUser,
+
+  getLocalUserById,
+
+  loginLocalUser,
+
+  logoutLocalUser,
+
+  registerLocalUser,
+
+  subscribeLocalAuth,
+
+  updateLocalUserProfile,
+
+  type AuthUser,
+
+} from '../utils/localAuthStore'
+
+
+
+export type { AuthUser } from '../utils/localAuthStore'
+
+
 
 /** Standard result for auth operations. */
+
 export interface AuthResponse {
+
   success: boolean
+
   error: string | null
+
   user: AuthUser | null
+
 }
+
+
 
 /** Result for logout (no user payload). */
+
 export interface LogoutResponse {
+
   success: boolean
+
   error: string | null
+
 }
+
+
 
 const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+
+
 function normalizeSupabaseUrl(url: string | undefined): string {
+
   if (!url) return ''
+
   return url.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '')
+
 }
+
+
 
 const supabaseUrl = normalizeSupabaseUrl(rawSupabaseUrl)
 
-/** Shared Supabase client for authentication and profile operations. */
+
+
+/** Optional Supabase client (analytics/admin only — auth uses localStorage). */
+
 export const supabase = createClient<Database>(
+
   supabaseUrl || 'https://placeholder.supabase.co',
+
   supabaseKey || 'placeholder',
+
 )
 
+
+
 /** Judge/demo login — override via VITE_DEMO_EMAIL and VITE_DEMO_PASSWORD in .env.local */
+
 export const DEMO_CREDENTIALS = {
+
   email: (import.meta.env.VITE_DEMO_EMAIL ?? 'demo@budgetguard.app').trim().toLowerCase(),
+
   password: import.meta.env.VITE_DEMO_PASSWORD ?? 'demo123456',
+
   username: 'demo_judge',
+
 } as const
 
-function matchesDemoCredentials(email: string, password: string): boolean {
-  return email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password
+
+
+let demoBootstrapStarted = false
+
+
+
+function startDemoBootstrap(): void {
+
+  if (demoBootstrapStarted || typeof window === 'undefined') return
+
+  demoBootstrapStarted = true
+
+  void ensureDemoLocalUser()
+
 }
 
-function isInvalidLoginError(message: string): boolean {
-  const normalized = message.toLowerCase()
-  return (
-    normalized.includes('invalid login credentials') ||
-    normalized.includes('invalid email or password')
-  )
-}
 
-/**
- * Maps a Supabase Auth user to {@link AuthUser}.
- */
-function toAuthUser(user: User): AuthUser {
-  return {
-    id: user.id,
-    email: user.email ?? '',
-    created_at: user.created_at,
-  }
-}
 
-/**
- * Returns a safe, user-facing error message (no sensitive internals).
- */
 function toFriendlyErrorMessage(error: unknown, fallback: string): string {
+
   if (error && typeof error === 'object' && 'message' in error) {
-    const message = String((error as { message: string }).message)
-    const normalized = message.toLowerCase()
 
-    if (
-      normalized.includes('invalid login credentials') ||
-      normalized.includes('invalid email or password')
-    ) {
-      return 'Invalid email or password. Please try again.'
-    }
+    return String((error as { message: string }).message)
 
-    if (normalized.includes('user already registered')) {
-      return 'An account with this email already exists. Try signing in instead.'
-    }
-
-    if (normalized.includes('email not confirmed')) {
-      return 'Please confirm your email before signing in.'
-    }
-
-    if (normalized.includes('password should be at least')) {
-      return 'Password must be at least 6 characters.'
-    }
-
-    if (normalized.includes('unable to validate email')) {
-      return 'Please enter a valid email address.'
-    }
-
-    if (normalized.includes('rate limit')) {
-      return 'Too many attempts. Please wait a moment and try again.'
-    }
-
-    return message
   }
 
   return fallback
+
 }
 
+
+
 /**
- * Registers a new user and creates their profile in `public.users`.
+
+ * Registers a new user in localStorage (no Supabase database).
+
  */
+
 export async function signUp(
+
   email: string,
+
   password: string,
+
   username: string,
+
 ): Promise<AuthResponse> {
+
+  startDemoBootstrap()
+
+
+
   const trimmedEmail = email.trim().toLowerCase()
+
   const trimmedUsername = username.trim()
+
+
 
   if (!trimmedEmail || !password || !trimmedUsername) {
+
     return {
+
       success: false,
+
       error: 'Email, password, and username are required.',
+
       user: null,
+
     }
+
   }
 
-  try {
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: trimmedEmail,
-      password,
-      options: {
-        data: { username: trimmedUsername },
-      },
-    })
 
-    if (signUpError) {
-      return {
-        success: false,
-        error: toFriendlyErrorMessage(signUpError, 'Sign up failed. Please try again.'),
-        user: null,
-      }
-    }
 
-    if (!data.user) {
-      return {
-        success: false,
-        error: 'Sign up failed. No user was returned.',
-        user: null,
-      }
-    }
-
-    const { error: profileError } = await supabase.from('users').insert({
-      id: data.user.id,
-      email: trimmedEmail,
-      username: trimmedUsername,
-    })
-
-    if (profileError) {
-      return {
-        success: false,
-        error: toFriendlyErrorMessage(
-          profileError,
-          'Account created, but profile setup failed. Please contact support.',
-        ),
-        user: null,
-      }
-    }
+  if (password.length < 6) {
 
     return {
-      success: true,
-      error: null,
-      user: toAuthUser(data.user),
-    }
-  } catch (error) {
-    return {
+
       success: false,
-      error: toFriendlyErrorMessage(error, 'Sign up failed. Please try again.'),
+
+      error: 'Password must be at least 6 characters.',
+
       user: null,
+
     }
+
   }
+
+
+
+  const result = await registerLocalUser(trimmedEmail, password, trimmedUsername)
+
+  if (!result.success) {
+
+    return { success: false, error: result.error, user: null }
+
+  }
+
+
+
+  return { success: true, error: null, user: result.user }
+
 }
 
+
+
 /**
- * Signs in with email and password.
+
+ * Signs in with email and password (localStorage).
+
  */
+
 export async function logIn(email: string, password: string): Promise<AuthResponse> {
+
+  startDemoBootstrap()
+
+
+
   const trimmedEmail = email.trim().toLowerCase()
+
+
 
   if (!trimmedEmail || !password) {
+
     return {
+
       success: false,
+
       error: 'Email and password are required.',
+
       user: null,
+
     }
+
   }
 
-  try {
-    let { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email: trimmedEmail,
-      password,
-    })
 
-    // First-time demo login: create the judge account, then sign in again.
-    if (
-      signInError &&
-      matchesDemoCredentials(trimmedEmail, password) &&
-      isInvalidLoginError(signInError.message)
-    ) {
-      const provisioned = await signUp(
-        trimmedEmail,
-        password,
-        DEMO_CREDENTIALS.username,
-      )
 
-      if (provisioned.success && provisioned.user) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        if (session?.user) {
-          return {
-            success: true,
-            error: null,
-            user: toAuthUser(session.user),
-          }
-        }
-      }
+  if (
 
-      const retry = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password,
-      })
-      data = retry.data
-      signInError = retry.error
-    }
+    trimmedEmail === DEMO_CREDENTIALS.email &&
 
-    if (signInError) {
-      return {
-        success: false,
-        error: toFriendlyErrorMessage(signInError, 'Sign in failed. Please try again.'),
-        user: null,
-      }
-    }
+    password === DEMO_CREDENTIALS.password
 
-    if (!data.user) {
-      return {
-        success: false,
-        error: 'Sign in failed. No session was created.',
-        user: null,
-      }
-    }
+  ) {
 
-    return {
-      success: true,
-      error: null,
-      user: toAuthUser(data.user),
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: toFriendlyErrorMessage(error, 'Sign in failed. Please try again.'),
-      user: null,
-    }
+    await ensureDemoLocalUser()
+
   }
+
+
+
+  const result = await loginLocalUser(trimmedEmail, password)
+
+  if (!result.success) {
+
+    return { success: false, error: result.error, user: null }
+
+  }
+
+
+
+  return { success: true, error: null, user: result.user }
+
 }
 
-/**
- * Signs out the current user and clears the local session.
- */
-export async function logOut(): Promise<LogoutResponse> {
-  try {
-    const { error } = await supabase.auth.signOut()
 
-    if (error) {
-      return {
-        success: false,
-        error: toFriendlyErrorMessage(error, 'Sign out failed. Please try again.'),
-      }
-    }
+
+/**
+
+ * Signs out the current user and clears the local session.
+
+ */
+
+export async function logOut(): Promise<LogoutResponse> {
+
+  try {
+
+    logoutLocalUser()
 
     return { success: true, error: null }
+
   } catch (error) {
+
     return {
+
       success: false,
+
       error: toFriendlyErrorMessage(error, 'Sign out failed. Please try again.'),
+
     }
+
   }
+
 }
 
+
+
 /**
+
  * Returns the currently signed-in user, or `null` if there is no session.
+
  */
+
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  try {
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession()
 
-    if (error || !session?.user) {
-      return null
-    }
+  startDemoBootstrap()
 
-    return toAuthUser(session.user)
-  } catch {
-    return null
-  }
+  return getLocalSessionUser()
+
 }
 
+
+
 /**
- * Subscribes to auth state changes (sign-in, sign-out, token refresh).
- * @returns Unsubscribe function — call it on cleanup.
+
+ * Subscribes to auth state changes (sign-in, sign-out).
+
  */
+
 export function onAuthStateChange(
-  callback: (user: AuthUser | null) => void,
-): () => void {
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session) => {
-    callback(session?.user ? toAuthUser(session.user) : null)
-  })
 
-  return () => {
-    subscription.unsubscribe()
-  }
+  callback: (user: AuthUser | null) => void,
+
+): () => void {
+
+  startDemoBootstrap()
+
+  callback(getLocalSessionUser())
+
+  return subscribeLocalAuth(callback)
+
 }
 
+
+
 /**
- * Updates the user's profile in `public.users`.
+
+ * Updates the user's profile in localStorage.
+
  */
+
 export async function updateUserProfile(
+
   username: string,
+
   email: string,
+
 ): Promise<AuthResponse> {
+
   const trimmedEmail = email.trim().toLowerCase()
+
   const trimmedUsername = username.trim()
 
+
+
   if (!trimmedEmail || !trimmedUsername) {
+
     return {
+
       success: false,
+
       error: 'Username and email are required.',
+
       user: null,
+
     }
+
   }
 
-  try {
-    const {
-      data: { user },
-      error: sessionError,
-    } = await supabase.auth.getUser()
 
-    if (sessionError || !user) {
-      return {
-        success: false,
-        error: 'You must be signed in to update your profile.',
-        user: null,
-      }
-    }
 
-    const { error: profileError } = await supabase
-      .from('users')
-      .update({ email: trimmedEmail, username: trimmedUsername })
-      .eq('id', user.id)
+  const current = getLocalSessionUser()
 
-    if (profileError) {
-      return {
-        success: false,
-        error: toFriendlyErrorMessage(
-          profileError,
-          'Could not update profile. Please try again.',
-        ),
-        user: null,
-      }
-    }
-
-    const { error: authUpdateError } = await supabase.auth.updateUser({
-      email: trimmedEmail,
-      data: { username: trimmedUsername },
-    })
-
-    if (authUpdateError) {
-      return {
-        success: false,
-        error: toFriendlyErrorMessage(
-          authUpdateError,
-          'Profile saved locally, but email update requires confirmation.',
-        ),
-        user: toAuthUser(user),
-      }
-    }
-
-    const {
-      data: { user: refreshedUser },
-    } = await supabase.auth.getUser()
+  if (!current) {
 
     return {
-      success: true,
-      error: null,
-      user: refreshedUser ? toAuthUser(refreshedUser) : toAuthUser(user),
-    }
-  } catch (error) {
-    return {
+
       success: false,
-      error: toFriendlyErrorMessage(error, 'Could not update profile. Please try again.'),
+
+      error: 'You must be signed in to update your profile.',
+
       user: null,
+
     }
+
   }
+
+
+
+  const result = await updateLocalUserProfile(
+
+    current.id,
+
+    trimmedUsername,
+
+    trimmedEmail,
+
+  )
+
+
+
+  if (!result.success) {
+
+    return { success: false, error: result.error, user: null }
+
+  }
+
+
+
+  return { success: true, error: null, user: result.user }
+
 }
+
+
 
 /**
- * Sends a password reset email to the given address.
+
+ * Password reset is not available for local-only accounts.
+
  */
+
 export async function resetPassword(email: string): Promise<AuthResponse> {
-  const trimmedEmail = email.trim().toLowerCase()
 
-  if (!trimmedEmail) {
-    return {
-      success: false,
-      error: 'Email is required.',
-      user: null,
-    }
+  void email
+
+  return {
+
+    success: false,
+
+    error:
+
+      'Password reset is not available for local accounts. Sign up again with a new email or use the demo login.',
+
+    user: null,
+
   }
 
-  try {
-    const redirectTo =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/`
-        : undefined
-
-    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-      redirectTo,
-    })
-
-    if (error) {
-      return {
-        success: false,
-        error: toFriendlyErrorMessage(
-          error,
-          'Could not send reset email. Please try again.',
-        ),
-        user: null,
-      }
-    }
-
-    return {
-      success: true,
-      error: null,
-      user: null,
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: toFriendlyErrorMessage(
-        error,
-        'Could not send reset email. Please try again.',
-      ),
-      user: null,
-    }
-  }
 }
+
+
+
+/** Load profile username for the profile page. */
+
+export function getProfileForUser(userId: string, fallbackEmail: string): string {
+
+  const user = getLocalUserById(userId)
+
+  if (user?.username) return user.username
+
+  const localPart = fallbackEmail.split('@')[0]
+
+  return localPart || 'user'
+
+}
+
+

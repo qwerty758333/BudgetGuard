@@ -20,7 +20,6 @@ import { useBudgets } from './hooks/useBudgets'
 import { useBadges } from './hooks/useBadges'
 import { useChallenges } from './hooks/useChallenges'
 import type { Category } from './types'
-import { isSupabaseConfigured } from './lib/supabase'
 import { trackEvent } from './services/analyticsService'
 import {
   loadFromLocalStorage,
@@ -81,7 +80,7 @@ function SunIcon() {
 }
 
 function BudgetGuardApp() {
-  const { session, user, loading, logout, role, isAdmin } = useAuth()
+  const { user, loading, logout, isAdmin } = useAuth()
   const {
     expenses,
     loading: expensesLoading,
@@ -199,7 +198,6 @@ function BudgetGuardApp() {
   void updateChallengeProgress
   void deleteChallenge
   void budgetsLoading
-  void role
 
   const handleAddExpense = async (
     amount: number,
@@ -239,7 +237,7 @@ function BudgetGuardApp() {
     await setBudget(category, amount)
   }
 
-  if (!isSupabaseConfigured) {
+  if (false) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
         <div className="max-w-md rounded-xl border border-amber-200 bg-white p-6 text-center shadow-sm dark:border-amber-800 dark:bg-gray-800">
@@ -271,7 +269,7 @@ function BudgetGuardApp() {
     )
   }
 
-  if (!session || !user) {
+  if (!user) {
     return <Navigate to="/login" replace state={{ from: '/dashboard' }} />
   }
 
