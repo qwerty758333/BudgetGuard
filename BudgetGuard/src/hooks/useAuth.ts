@@ -1,26 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { fetchAdminRoleFromDb } from '../utils/adminAccess'
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState<'user' | 'admin' | null>(null)
 
-  async function fetchRole(userId: string) {
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (error) {
-      console.error('Error fetching role:', error.message)
-      setRole('user')
-    } else {
-      setRole((data?.role as 'user' | 'admin') ?? 'user')
+  const applyRole = useCallback(async (authUser: User | null) => {
+    if (!authUser) {
+      setRole(null)
+      return
     }
-  }
+
+    const resolved = await fetchAdminRoleFromDb(authUser)
+    setRole(resolved)
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -28,8 +24,8 @@ export function useAuth() {
     void supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       if (!mounted) return
       setSession(initialSession)
-      if (initialSession?.user?.id) {
-        void fetchRole(initialSession.user.id)
+      if (initialSession?.user) {
+        void applyRole(initialSession.user)
       }
       setLoading(false)
     })
@@ -38,8 +34,8 @@ export function useAuth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession)
-      if (nextSession?.user?.id) {
-        void fetchRole(nextSession.user.id)
+      if (nextSession?.user) {
+        void applyRole(nextSession.user)
       } else {
         setRole(null)
       }
@@ -50,7 +46,7 @@ export function useAuth() {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, [applyRole])
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut()

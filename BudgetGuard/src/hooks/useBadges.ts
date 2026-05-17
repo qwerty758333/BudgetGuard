@@ -1,6 +1,6 @@
 // Supabase `badges` table requires a UNIQUE constraint on (user_id, badge_id) for upsert onConflict.
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 export interface Badge {
@@ -19,32 +19,32 @@ const DEFAULT_BADGES = [
   {
     badge_id: 'budget_master',
     name: 'Budget Master',
-    emoji: '🏆',
-    description: 'Stay under your total budget for a week',
+    emoji: '👑',
+    description: 'Stay under total budget',
   },
   {
     badge_id: 'meal_prepper',
     name: 'Meal Prepper',
-    emoji: '🍱',
-    description: 'Keep food spending under $100',
+    emoji: '🍽️',
+    description: 'Keep food spending under limit',
   },
   {
     badge_id: 'minimalist',
     name: 'Minimalist',
-    emoji: '🧘',
-    description: 'Keep entertainment spending under $50',
+    emoji: '🎬',
+    description: 'Entertainment under limit',
   },
   {
-    badge_id: 'early_bird',
-    name: 'Early Bird',
-    emoji: '🌅',
-    description: 'Log an expense before 9am',
+    badge_id: 'scholar',
+    name: 'Scholar',
+    emoji: '📚',
+    description: 'Education under limit',
   },
   {
-    badge_id: 'streak_3',
-    name: 'On a Roll',
-    emoji: '🔥',
-    description: 'Log expenses 3 days in a row',
+    badge_id: 'efficiency_expert',
+    name: 'Efficiency Expert',
+    emoji: '🚗',
+    description: 'Transport under limit',
   },
 ] as const
 
@@ -52,9 +52,11 @@ export function useBadges(userId: string | undefined) {
   const [badges, setBadges] = useState<Badge[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [dbAvailable, setDbAvailable] = useState(true)
+  const initAttemptedRef = useRef(false)
 
-  async function initialiseBadges() {
-    if (!userId) return
+  const initialiseBadges = useCallback(async (): Promise<boolean> => {
+    if (!userId) return false
 
     const rows = DEFAULT_BADGES.map((b) => ({
       ...b,
@@ -69,10 +71,14 @@ export function useBadges(userId: string | undefined) {
 
     if (upsertError) {
       setError(upsertError.message)
+      setDbAvailable(false)
+      return false
     }
-  }
 
-  async function fetchBadges() {
+    return true
+  }, [userId])
+
+  const fetchBadges = useCallback(async () => {
     if (!userId) return
 
     setLoading(true)
@@ -86,49 +92,77 @@ export function useBadges(userId: string | undefined) {
 
     if (fetchError) {
       setError(fetchError.message)
+      setBadges([])
+      setDbAvailable(false)
       setLoading(false)
-    } else if (data && data.length === 0) {
-      await initialiseBadges()
-      await fetchBadges()
-    } else {
+      return
+    }
+
+    setDbAvailable(true)
+
+    if (data && data.length > 0) {
       setBadges(data as Badge[])
       setLoading(false)
+      return
     }
-  }
+
+    if (!initAttemptedRef.current) {
+      initAttemptedRef.current = true
+      const created = await initialiseBadges()
+      if (created) {
+        const { data: retryData, error: retryError } = await supabase
+          .from('badges')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: true })
+
+        if (!retryError && retryData) {
+          setBadges(retryData as Badge[])
+        }
+      }
+    }
+
+    setLoading(false)
+  }, [userId, initialiseBadges])
 
   useEffect(() => {
+    initAttemptedRef.current = false
     if (userId) {
       void fetchBadges()
     } else {
       setBadges([])
       setLoading(false)
+      setDbAvailable(true)
     }
-  }, [userId])
+  }, [userId, fetchBadges])
 
-  async function unlockBadge(badgeId: string) {
-    if (!userId) return
+  const unlockBadge = useCallback(
+    async (badgeId: string) => {
+      if (!userId || !dbAvailable) return
 
-    const now = new Date().toISOString()
+      const now = new Date().toISOString()
 
-    const { error: unlockError } = await supabase
-      .from('badges')
-      .update({ unlocked: true, unlocked_at: now })
-      .eq('user_id', userId)
-      .eq('badge_id', badgeId)
-      .eq('unlocked', false)
+      const { error: unlockError } = await supabase
+        .from('badges')
+        .update({ unlocked: true, unlocked_at: now })
+        .eq('user_id', userId)
+        .eq('badge_id', badgeId)
+        .eq('unlocked', false)
 
-    if (unlockError) {
-      setError(unlockError.message)
-    } else {
-      setBadges((prev) =>
-        prev.map((b) =>
-          b.badge_id === badgeId
-            ? { ...b, unlocked: true, unlocked_at: now }
-            : b,
-        ),
-      )
-    }
-  }
+      if (unlockError) {
+        setError(unlockError.message)
+      } else {
+        setBadges((prev) =>
+          prev.map((b) =>
+            b.badge_id === badgeId
+              ? { ...b, unlocked: true, unlocked_at: now }
+              : b,
+          ),
+        )
+      }
+    },
+    [userId, dbAvailable],
+  )
 
-  return { badges, loading, error, unlockBadge, refetch: fetchBadges }
+  return { badges, loading, error, dbAvailable, unlockBadge, refetch: fetchBadges }
 }

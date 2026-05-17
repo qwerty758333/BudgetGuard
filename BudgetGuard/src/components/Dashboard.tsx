@@ -1,7 +1,13 @@
+import { useEffect, useState } from 'react'
 import { StatCard } from './StatCard'
 import { SpendingChart } from './SpendingChart'
 import type { Budgets } from '../App'
 import type { Expense } from '../types'
+import {
+  getCurrentUser,
+  onAuthStateChange,
+  type AuthUser,
+} from '../services/authService'
 import {
   getTotalSpent,
   getTotalBudget,
@@ -24,6 +30,41 @@ export function Dashboard({
   expensesLoading = false,
 }: DashboardProps) {
   void userId
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const getUser = async () => {
+      const u = await getCurrentUser()
+      setUser(u)
+      setIsLoading(false)
+    }
+
+    void getUser()
+
+    const unsubscribe = onAuthStateChange((u) => {
+      setUser(u)
+    })
+
+    return unsubscribe
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-gray-500 dark:text-gray-400">Not logged in</p>
+      </div>
+    )
+  }
+
   const totalSpent = getTotalSpent(expenses)
   const totalBudget = getTotalBudget(budgets)
   const remainingBudget = totalBudget - totalSpent
@@ -33,7 +74,10 @@ export function Dashboard({
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6 sm:mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl">
+        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+          Welcome, {user.email}!
+        </p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl">
           Dashboard
         </h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 sm:text-base">

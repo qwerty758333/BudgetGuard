@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { tracker } from '../utils/analyticsTracker'
 import { resolveIsAdmin } from '../utils/adminAccess'
 
 /** Supported analytics event names. */
@@ -174,9 +175,12 @@ export async function trackEvent(
   data: object,
   userId?: string,
 ): Promise<TrackEventResult> {
+  tracker.setUserId(userId)
+  tracker.trackEvent(type, data, userId)
+
   const client = getClient()
   if (!client) {
-    return { success: false, error: 'Analytics is not configured' }
+    return { success: true }
   }
 
   const event: AnalyticsEvent = {

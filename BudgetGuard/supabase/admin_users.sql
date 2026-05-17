@@ -2,11 +2,15 @@
 
 create table if not exists public.admin_users (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null unique references auth.users (id) on delete cascade,
+  user_id uuid unique references auth.users (id) on delete cascade,
   email text,
   role text default 'admin',
   created_at timestamptz not null default now()
 );
+
+-- Legacy tables may only have `id`; add `user_id` when missing.
+alter table public.admin_users
+  add column if not exists user_id uuid references auth.users (id) on delete cascade;
 
 -- If table existed with id-only rows (legacy), backfill user_id from id when possible.
 do $$

@@ -49,6 +49,9 @@ function ChartTooltip({ active, payload }: ChartTooltipProps) {
 }
 
 export function SpendingChart({ data }: SpendingChartProps) {
+  // Recharts does not always redraw when slice values change; key forces a fresh chart.
+  const chartKey = data.map((item) => `${item.name}:${item.value}`).join('|')
+
   if (data.length === 0) {
     return (
       <section className="flex h-[300px] w-full items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
@@ -60,7 +63,7 @@ export function SpendingChart({ data }: SpendingChartProps) {
   return (
     <section className="rounded-xl bg-white p-4 shadow-md dark:bg-gray-800 dark:shadow-lg">
       <ResponsiveContainer width="100%" height={300}>
-      <PieChart>
+      <PieChart key={chartKey}>
         <Pie
           data={data}
           dataKey="value"

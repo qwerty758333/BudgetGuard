@@ -34,6 +34,11 @@ function hasAdminEmail(user: User): boolean {
   return adminEmails.includes(normalizedUserEmail)
 }
 
+function isMissingUserIdColumn(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return normalized.includes('user_id') && normalized.includes('does not exist')
+}
+
 /** Whether admin env vars were present at Vite build time (e.g. Netlify). */
 export function getAdminDeploymentDiagnostics(): {
   adminEmailConfigured: boolean
@@ -70,6 +75,40 @@ export function logAdminDeploymentDebug(context: string, user?: User | null): vo
 }
 
 /**
+ * Reads role from public.admin_users.
+ * Supports both `user_id` and legacy `id` (= auth user id) column layouts.
+ */
+export async function fetchAdminRoleFromDb(user: User): Promise<'user' | 'admin'> {
+  if (hasAdminRole(user) || hasAdminEmail(user)) {
+    return 'admin'
+  }
+
+  const { data, error } = await supabase
+    .from('admin_users')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!error && data) {
+    return data.role === 'admin' ? 'admin' : 'user'
+  }
+
+  if (error && isMissingUserIdColumn(error.message)) {
+    const { data: legacy, error: legacyError } = await supabase
+      .from('admin_users')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (!legacyError && legacy) {
+      return legacy.role === 'admin' ? 'admin' : 'user'
+    }
+  }
+
+  return 'user'
+}
+
+/**
  * Returns true when the user has a row in public.admin_users.
  * Fails open (returns false) if the table is missing or RLS blocks access.
  */
@@ -81,14 +120,26 @@ async function hasAdminUsersRecord(user: User): Promise<boolean> {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (error) {
-      if (import.meta.env.DEV) {
-        console.error('[adminAccess] admin_users lookup failed', error)
-      }
-      return false
+    if (!error) {
+      return Boolean(data)
     }
 
-    return Boolean(data)
+    if (isMissingUserIdColumn(error.message)) {
+      const { data: legacy, error: legacyError } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!legacyError) {
+        return Boolean(legacy)
+      }
+    }
+
+    if (import.meta.env.DEV) {
+      console.error('[adminAccess] admin_users lookup failed', error)
+    }
+    return false
   } catch (error) {
     if (import.meta.env.DEV) {
       console.error('[adminAccess] admin_users lookup error', error)

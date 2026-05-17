@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Route, Routes } from 'react-router-dom'
-import AuthPage from './components/AuthPage'
+import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import { getCurrentUser, type AuthUser } from './services/authService'
+import SignUp from './components/SignUp'
+import Login from './components/Login'
+import Landing from './components/Landing'
+import ProtectedRoute from './components/ProtectedRoute'
+import UserProfile from './components/UserProfile'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
 import { BadgeGallery } from './components/BadgeGallery'
 import { Celebration } from './components/Celebration'
@@ -17,8 +22,15 @@ import { useChallenges } from './hooks/useChallenges'
 import type { Category } from './types'
 import { isSupabaseConfigured } from './lib/supabase'
 import { trackEvent } from './services/analyticsService'
-import { loadFromLocalStorage, saveToLocalStorage } from './utils/storage'
-import { checkBadges } from './utils/badges'
+import {
+  loadFromLocalStorage,
+  saveToLocalStorage,
+  saveUserBadges,
+  saveUserBudgets,
+  saveUserExpenses,
+} from './utils/storage'
+import { checkBadges, getBadgeById } from './utils/badges'
+import PrivateAnalyticsDashboard from './components/PrivateAnalyticsDashboard'
 
 export interface Budgets {
   [category: string]: number
@@ -28,11 +40,9 @@ const BADGE_ID_TO_SUPABASE: Record<string, string> = {
   'budget-master': 'budget_master',
   'meal-prepper': 'meal_prepper',
   minimalist: 'minimalist',
+  scholar: 'scholar',
+  'efficiency-expert': 'efficiency_expert',
 }
-
-const SUPABASE_TO_LOCAL_BADGE_ID: Record<string, string> = Object.fromEntries(
-  Object.entries(BADGE_ID_TO_SUPABASE).map(([local, supabase]) => [supabase, local]),
-)
 
 function MoonIcon() {
   return (
@@ -89,6 +99,7 @@ function BudgetGuardApp() {
   const {
     badges,
     loading: badgesLoading,
+    dbAvailable: badgesDbAvailable,
     unlockBadge,
   } = useBadges(user?.id)
 
@@ -103,29 +114,29 @@ function BudgetGuardApp() {
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics'>('dashboard')
+  const [showPrivateAnalytics, setShowPrivateAnalytics] = useState(false)
   const [celebrationBadgeName, setCelebrationBadgeName] = useState<string | null>(null)
-  const prevUnlockedBadgeIdsRef = useRef<string[]>([])
+  const prevEarnedBadgeIdsRef = useRef<string[]>([])
 
-  const earnedBadges = badges
-    .filter((b) => b.unlocked)
-    .map((b) => SUPABASE_TO_LOCAL_BADGE_ID[b.badge_id])
-    .filter((id): id is string => Boolean(id))
+  const totalBudget = Object.values(budgets).reduce((sum, amount) => sum + amount, 0)
+  const earnedBadges = checkBadges(
+    expenses.map((e) => ({ amount: e.amount, category: e.category })),
+    { total: totalBudget },
+  )
 
   useEffect(() => {
-    const unlockedIds = badges.filter((b) => b.unlocked).map((b) => b.badge_id)
-    const newlyUnlocked = unlockedIds.filter(
-      (id) => !prevUnlockedBadgeIdsRef.current.includes(id),
+    const newlyEarned = earnedBadges.filter(
+      (id) => !prevEarnedBadgeIdsRef.current.includes(id),
     )
 
-    if (newlyUnlocked.length > 0 && prevUnlockedBadgeIdsRef.current.length > 0) {
-      const badge = badges.find((b) => b.badge_id === newlyUnlocked[0])
-      if (badge) {
-        setCelebrationBadgeName(badge.name)
-      }
+    if (newlyEarned.length > 0 && prevEarnedBadgeIdsRef.current.length > 0) {
+      const badgeId = newlyEarned[0]
+      const label = getBadgeById(badgeId)?.name ?? badgeId
+      setCelebrationBadgeName(label)
     }
 
-    prevUnlockedBadgeIdsRef.current = unlockedIds
-  }, [badges])
+    prevEarnedBadgeIdsRef.current = earnedBadges
+  }, [earnedBadges])
 
   useEffect(() => {
     if (!celebrationBadgeName) return
@@ -153,15 +164,27 @@ function BudgetGuardApp() {
   }, [darkMode])
 
   useEffect(() => {
-    if (!user?.id || badgesLoading || badges.length === 0) return
+    if (!user?.id) return
+    saveUserExpenses(user.id, expenses)
+  }, [user?.id, expenses])
 
-    const totalBudget = Object.values(budgets).reduce((sum, amount) => sum + amount, 0)
-    const earnedIds = checkBadges(
-      expenses.map((e) => ({ amount: e.amount, category: e.category })),
-      { total: totalBudget },
-    )
+  useEffect(() => {
+    if (!user?.id) return
+    saveUserBudgets(user.id, budgets)
+  }, [user?.id, budgets])
 
-    earnedIds.forEach((localId) => {
+  useEffect(() => {
+    if (!user?.id) return
+    saveUserBadges(user.id, earnedBadges)
+  }, [user?.id, earnedBadges])
+
+  // Sync earned badges to Supabase only when the badges table is available (avoids 400 spam).
+  useEffect(() => {
+    if (!user?.id || badgesLoading || !badgesDbAvailable || badges.length === 0) {
+      return
+    }
+
+    earnedBadges.forEach((localId) => {
       const badgeId = BADGE_ID_TO_SUPABASE[localId]
       if (!badgeId) return
 
@@ -170,7 +193,7 @@ function BudgetGuardApp() {
         void unlockBadge(badgeId)
       }
     })
-  }, [expenses, budgets, badges, badgesLoading, user?.id, unlockBadge])
+  }, [earnedBadges, badges, badgesLoading, badgesDbAvailable, user?.id, unlockBadge])
 
   void challenges
   void challengesLoading
@@ -186,15 +209,32 @@ function BudgetGuardApp() {
     date: string,
     notes: string,
   ) => {
-    if (!user) return
+    if (!user) {
+      throw new Error('You must be signed in to add an expense.')
+    }
 
-    await addExpense({
+    const result = await addExpense({
       user_id: user.id,
       amount,
       category: category as Category,
       date,
       notes: notes || null,
     })
+
+    if (!result.success) {
+      throw new Error(result.error)
+    }
+
+    await trackEvent(
+      'expense_added',
+      {
+        amount,
+        category,
+        date,
+        timestamp: new Date().toISOString(),
+      },
+      user.id,
+    )
   }
 
   const handleSaveBudget = async (category: string, amount: number) => {
@@ -233,11 +273,11 @@ function BudgetGuardApp() {
     )
   }
 
-  if (!session) {
-    return <AuthPage />
+  if (!session || !user) {
+    return <Navigate to="/login" replace state={{ from: '/dashboard' }} />
   }
 
-  const userId = user!.id
+  const userId = user.id
 
   const handleDarkModeToggle = async () => {
     await trackEvent(
@@ -282,13 +322,26 @@ function BudgetGuardApp() {
                 Admin
               </span>
             )}
-            <a
-              href="/admin/analytics"
+            <Link
+              to="/profile"
+              className="rounded-lg border border-white/30 bg-white/10 px-2 py-2 text-xs font-medium text-white transition hover:bg-white/20 sm:px-3 sm:text-sm"
+            >
+              Profile
+            </Link>
+            <Link
+              to="/admin/analytics"
               className="rounded-lg border border-white/30 bg-white/10 px-2 py-2 text-xs font-medium text-white transition hover:bg-white/20 sm:px-3 sm:text-sm"
             >
               📊 <span className="hidden sm:inline">Admin Analytics</span>
               <span className="sm:hidden">Admin</span>
-            </a>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowPrivateAnalytics((open) => !open)}
+              className="rounded-lg border border-white/30 bg-white/10 px-2 py-2 text-xs font-medium text-white transition hover:bg-white/20 sm:px-3 sm:text-sm"
+            >
+              📈 <span className="hidden sm:inline">My Analytics</span>
+            </button>
             <button
               type="button"
               onClick={() => setIsSettingsOpen(true)}
@@ -355,6 +408,15 @@ function BudgetGuardApp() {
         )}
 
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
+          {showPrivateAnalytics && (
+            <PrivateAnalyticsDashboard
+              userId={userId}
+              expenses={expenses}
+              earnedBadges={earnedBadges}
+              onClose={() => setShowPrivateAnalytics(false)}
+            />
+          )}
+
           {activeTab === 'dashboard' && (
             <>
               {celebrationBadgeName && (
@@ -395,11 +457,50 @@ function BudgetGuardApp() {
   )
 }
 
-function App() {
+export function App() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [, setUser] = useState<AuthUser | null>(null)
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const currentUser = await getCurrentUser()
+      setUser(currentUser)
+      setIsLoading(false)
+    }
+    void checkUser()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <p className="text-lg text-gray-600 dark:text-gray-300">Loading...</p>
+      </div>
+    )
+  }
+
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/signup" element={<SignUp />} />
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <BudgetGuardApp />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <UserProfile />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/admin/analytics" element={<AdminAnalytics />} />
-      <Route path="/*" element={<BudgetGuardApp />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

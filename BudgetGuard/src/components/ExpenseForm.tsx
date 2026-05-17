@@ -48,7 +48,7 @@ interface ExpenseFormProps {
     category: string,
     date: string,
     notes: string,
-  ) => void
+  ) => void | Promise<void>
 }
 
 export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
@@ -59,6 +59,7 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
   const [date, setDate] = useState(getInitialState().date)
   const [notes, setNotes] = useState(getInitialState().notes)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState<CategoryPrediction | null>(null)
 
   const resetForm = () => {
@@ -101,7 +102,7 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
     }
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const parsedAmount = Number(amount)
@@ -111,8 +112,18 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
       return
     }
 
-    onAddExpense(parsedAmount, category, date, notes.trim())
-    resetForm()
+    setIsSubmitting(true)
+    try {
+      const noteText = notes.trim() || description.trim()
+      await onAddExpense(parsedAmount, category, date, noteText)
+      resetForm()
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Could not save expense. Please try again.'
+      alert(message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const confidencePercent = aiSuggestion
@@ -225,9 +236,10 @@ export function ExpenseForm({ userId, onAddExpense }: ExpenseFormProps) {
         </button>
         <button
           type="submit"
-          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 sm:w-auto sm:text-base"
+          disabled={isSubmitting}
+          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600 sm:w-auto sm:text-base"
         >
-          Add Expense
+          {isSubmitting ? 'Saving...' : 'Add Expense'}
         </button>
       </section>
     </form>
