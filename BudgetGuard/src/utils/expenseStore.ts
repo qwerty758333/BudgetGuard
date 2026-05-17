@@ -25,10 +25,10 @@ export async function loadExpensesForUser(userId: string): Promise<Expense[]> {
   return sortExpenses(rows.map(normalizeStoredExpense))
 }
 
-export async function saveExpensesForUser(
+export function saveExpensesForUser(
   userId: string,
   expenses: Expense[],
-): Promise<void> {
+): void {
   saveUserExpenses(userId, sortExpenses(expenses.map(normalizeStoredExpense)))
 }
 
