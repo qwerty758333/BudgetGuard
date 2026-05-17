@@ -5,6 +5,7 @@ import SignUp from './components/SignUp'
 import Login from './components/Login'
 import Landing from './components/Landing'
 import ProtectedRoute from './components/ProtectedRoute'
+import { AdminOnlyRoute } from './components/AdminOnlyRoute'
 import UserProfile from './components/UserProfile'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
 import { BadgeGallery } from './components/BadgeGallery'
@@ -12,6 +13,7 @@ import { Celebration } from './components/Celebration'
 import { AdminAnalytics } from './pages/AdminAnalytics'
 import { ExpenseForm } from './components/ExpenseForm'
 import { Dashboard } from './components/Dashboard'
+import { PrivateAnalyticsDashboard } from './components/PrivateAnalyticsDashboard'
 import { ExpenseList } from './components/ExpenseList'
 import { BudgetSettings } from './components/BudgetSettings'
 import { useAuth } from './hooks/useAuth'
@@ -114,6 +116,12 @@ function BudgetGuardApp() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics'>('dashboard')
   const [celebrationBadgeName, setCelebrationBadgeName] = useState<string | null>(null)
   const prevEarnedBadgeIdsRef = useRef<string[]>([])
+
+  useEffect(() => {
+    if (!isAdmin && activeTab === 'analytics') {
+      setActiveTab('dashboard')
+    }
+  }, [isAdmin, activeTab])
 
   const totalBudget = Object.values(budgets).reduce((sum, amount) => sum + amount, 0)
   const earnedBadges = checkBadges(
@@ -324,13 +332,15 @@ function BudgetGuardApp() {
             >
               Profile
             </Link>
-            <Link
-              to="/admin/analytics"
-              className="rounded-lg border border-white/30 bg-white/10 px-2 py-2 text-xs font-medium text-white transition hover:bg-white/20 sm:px-3 sm:text-sm"
-            >
-              📊 <span className="hidden sm:inline">Admin Analytics</span>
-              <span className="sm:hidden">Admin</span>
-            </Link>
+            {isAdmin && (
+              <Link
+                to="/admin/analytics"
+                className="rounded-lg border border-white/30 bg-white/10 px-2 py-2 text-xs font-medium text-white transition hover:bg-white/20 sm:px-3 sm:text-sm"
+              >
+                📊 <span className="hidden sm:inline">Admin Analytics</span>
+                <span className="sm:hidden">Admin</span>
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => setIsSettingsOpen(true)}
@@ -403,12 +413,16 @@ function BudgetGuardApp() {
                 <Celebration show={true} badgeName={celebrationBadgeName} />
               )}
               <ExpenseForm userId={userId} onAddExpense={handleAddExpense} />
-              <Dashboard
+              <PrivateAnalyticsDashboard
+                embedded
                 userId={userId}
+                expenses={expenses}
+                earnedBadges={earnedBadges}
+              />
+              <Dashboard
                 userEmail={user.email}
                 expenses={expenses}
                 budgets={budgets}
-                earnedBadges={earnedBadges}
                 expensesLoading={expensesLoading}
                 onSetBudgetLimit={handleSaveBudget}
               />
@@ -481,7 +495,14 @@ export function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/admin/analytics" element={<AdminAnalytics />} />
+      <Route
+        path="/admin/analytics"
+        element={
+          <AdminOnlyRoute>
+            <AdminAnalytics />
+          </AdminOnlyRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
