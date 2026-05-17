@@ -15,7 +15,7 @@ import { Dashboard } from './components/Dashboard'
 import { ExpenseList } from './components/ExpenseList'
 import { BudgetSettings } from './components/BudgetSettings'
 import { useAuth } from './hooks/useAuth'
-import { useExpenses } from './hooks/useExpenses'
+import { useExpenses, type ExpenseMutationResult } from './hooks/useExpenses'
 import { useBudgets } from './hooks/useBudgets'
 import { useBadges } from './hooks/useBadges'
 import { useChallenges } from './hooks/useChallenges'
@@ -213,7 +213,7 @@ function BudgetGuardApp() {
       throw new Error('You must be signed in to add an expense.')
     }
 
-    const result = await addExpense({
+    const result: ExpenseMutationResult = await addExpense({
       user_id: user.id,
       amount,
       category: category as Category,
@@ -221,7 +221,7 @@ function BudgetGuardApp() {
       notes: notes || null,
     })
 
-    if (!result.success) {
+    if ('error' in result) {
       throw new Error(result.error)
     }
 
