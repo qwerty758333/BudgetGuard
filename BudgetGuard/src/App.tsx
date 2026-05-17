@@ -30,7 +30,6 @@ import {
   saveUserExpenses,
 } from './utils/storage'
 import { checkBadges, getBadgeById } from './utils/badges'
-import PrivateAnalyticsDashboard from './components/PrivateAnalyticsDashboard'
 
 export interface Budgets {
   [category: string]: number
@@ -114,7 +113,6 @@ function BudgetGuardApp() {
   const [darkMode, setDarkMode] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics'>('dashboard')
-  const [showPrivateAnalytics, setShowPrivateAnalytics] = useState(false)
   const [celebrationBadgeName, setCelebrationBadgeName] = useState<string | null>(null)
   const prevEarnedBadgeIdsRef = useRef<string[]>([])
 
@@ -337,13 +335,6 @@ function BudgetGuardApp() {
             </Link>
             <button
               type="button"
-              onClick={() => setShowPrivateAnalytics((open) => !open)}
-              className="rounded-lg border border-white/30 bg-white/10 px-2 py-2 text-xs font-medium text-white transition hover:bg-white/20 sm:px-3 sm:text-sm"
-            >
-              📈 <span className="hidden sm:inline">My Analytics</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setIsSettingsOpen(true)}
               className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/30 bg-white/10 text-xl transition hover:bg-white/20"
               aria-label="Open budget settings"
@@ -408,15 +399,6 @@ function BudgetGuardApp() {
         )}
 
         <main className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-          {showPrivateAnalytics && (
-            <PrivateAnalyticsDashboard
-              userId={userId}
-              expenses={expenses}
-              earnedBadges={earnedBadges}
-              onClose={() => setShowPrivateAnalytics(false)}
-            />
-          )}
-
           {activeTab === 'dashboard' && (
             <>
               {celebrationBadgeName && (
@@ -427,6 +409,7 @@ function BudgetGuardApp() {
                 userId={userId}
                 expenses={expenses}
                 budgets={budgets}
+                earnedBadges={earnedBadges}
                 expensesLoading={expensesLoading}
                 onSetBudgetLimit={handleSaveBudget}
               />

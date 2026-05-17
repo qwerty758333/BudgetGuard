@@ -14,11 +14,13 @@ import {
   getCategoryBreakdownData,
 } from '../utils/budgetCalculations'
 import { formatCurrency } from '../utils/currency'
+import { PrivateAnalyticsDashboard } from './PrivateAnalyticsDashboard'
 
 interface DashboardProps {
   userId: string
   expenses: Expense[]
   budgets: Budgets
+  earnedBadges: string[]
   expensesLoading?: boolean
   onSetBudgetLimit?: (category: string, amount: number) => void
 }
@@ -27,6 +29,7 @@ export function Dashboard({
   userId,
   expenses,
   budgets,
+  earnedBadges,
   expensesLoading = false,
 }: DashboardProps) {
   void userId
@@ -114,6 +117,15 @@ export function Dashboard({
         ) : (
           <SpendingChart data={chartData} />
         )}
+      </section>
+
+      <section aria-label="Your analytics" className="mt-8 sm:mt-10">
+        <PrivateAnalyticsDashboard
+          embedded
+          userId={userId}
+          expenses={expenses}
+          earnedBadges={earnedBadges}
+        />
       </section>
     </main>
   )

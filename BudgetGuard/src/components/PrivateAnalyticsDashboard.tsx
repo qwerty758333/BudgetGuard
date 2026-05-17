@@ -8,7 +8,9 @@ interface PrivateAnalyticsDashboardProps {
   userId: string
   expenses: Expense[]
   earnedBadges: string[]
-  onClose: () => void
+  onClose?: () => void
+  /** When true, renders inline on the dashboard (no close control). */
+  embedded?: boolean
 }
 
 function formatTimeAgo(timestamp: number): string {
@@ -27,6 +29,7 @@ export function PrivateAnalyticsDashboard({
   expenses,
   earnedBadges,
   onClose,
+  embedded = false,
 }: PrivateAnalyticsDashboardProps) {
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -59,23 +62,37 @@ export function PrivateAnalyticsDashboard({
   }
 
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+    <section
+      className={
+        embedded
+          ? 'rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-900/40'
+          : 'rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800'
+      }
+    >
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          <h2
+            className={
+              embedded
+                ? 'text-lg font-semibold text-gray-800 dark:text-white sm:text-xl'
+                : 'text-xl font-bold text-gray-900 dark:text-gray-100'
+            }
+          >
             Your Analytics
           </h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Private activity stored on this device
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-        >
-          Close
-        </button>
+        {!embedded && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            Close
+          </button>
+        )}
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
