@@ -1,7 +1,9 @@
 // Supabase `badges` table requires a UNIQUE constraint on (user_id, badge_id) for upsert onConflict.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, type Database } from '../lib/supabase'
+
+type BadgeInsert = Database['public']['Tables']['badges']['Insert']
 
 export interface Badge {
   id: string
@@ -69,10 +71,24 @@ export function useBadges(userId: string | undefined) {
       .from('badges')
       .upsert(rows, { onConflict: 'user_id,badge_id' })
 
-    if (upsertError) {
-      setError(upsertError.message)
-      setDbAvailable(false)
-      return false
+    if (!upsertError) {
+      return true
+    }
+
+    // Fallback when unique (user_id, badge_id) is missing — insert rows individually.
+    for (const row of rows) {
+      const { error: insertError } = await supabase
+        .from('badges')
+        .insert(row as BadgeInsert)
+      if (
+        insertError &&
+        insertError.code !== '23505' &&
+        !insertError.message.toLowerCase().includes('duplicate')
+      ) {
+        setError(insertError.message)
+        setDbAvailable(false)
+        return false
+      }
     }
 
     return true

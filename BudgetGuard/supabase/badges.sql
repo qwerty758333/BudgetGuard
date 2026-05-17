@@ -13,6 +13,39 @@ create table if not exists public.badges (
   unique (user_id, badge_id)
 );
 
+-- Repair legacy badges tables missing columns or unique constraint (upsert 400).
+alter table if exists public.badges
+  add column if not exists user_id uuid references auth.users (id) on delete cascade;
+
+alter table if exists public.badges
+  add column if not exists badge_id text;
+
+alter table if exists public.badges
+  add column if not exists name text;
+
+alter table if exists public.badges
+  add column if not exists emoji text;
+
+alter table if exists public.badges
+  add column if not exists description text;
+
+alter table if exists public.badges
+  add column if not exists unlocked boolean not null default false;
+
+alter table if exists public.badges
+  add column if not exists unlocked_at timestamptz;
+
+alter table if exists public.badges
+  add column if not exists created_at timestamptz not null default now();
+
+do $$
+begin
+  alter table public.badges
+    add constraint badges_user_id_badge_id_key unique (user_id, badge_id);
+exception
+  when duplicate_object then null;
+end $$;
+
 create index if not exists badges_user_id_idx on public.badges (user_id);
 
 alter table public.badges enable row level security;
@@ -39,3 +72,6 @@ create policy "Users can update own badges"
   to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+grant usage on schema public to authenticated;
+grant select, insert, update on public.badges to authenticated;

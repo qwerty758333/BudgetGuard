@@ -26,22 +26,36 @@ export function useAnalytics(isAdmin: boolean) {
     setError(null)
 
     try {
-      const { data: expenses, error: expensesError } = await supabase
+      let expensesResult = await supabase
         .from('expenses')
         .select('amount, category, created_at')
 
-      if (expensesError) throw expensesError
+      if (expensesResult.error) {
+        expensesResult = await supabase
+          .from('expenses')
+          .select('amount, category, date')
+      }
 
-      const { data: users, error: usersError } = await supabase
-        .from('admin_users')
-        .select('id, role')
+      if (expensesResult.error) throw expensesResult.error
 
-      if (usersError) throw usersError
+      const expenses = expensesResult.data
 
-      const totalUsers = users?.length ?? 0
+      const { data: distinctUsers, error: distinctError } = await supabase
+        .from('expenses')
+        .select('user_id')
+
+      if (distinctError) throw distinctError
+
+      const totalUsers = new Set(
+        (distinctUsers ?? []).map((row) => row.user_id),
+      ).size
       const totalExpenses = expenses?.length ?? 0
       const totalSpending =
-        expenses?.reduce((sum, e) => sum + (e.amount ?? 0), 0) ?? 0
+        expenses?.reduce((sum, e) => {
+          const amount =
+            typeof e.amount === 'string' ? Number(e.amount) : (e.amount ?? 0)
+          return sum + amount
+        }, 0) ?? 0
       const averageSpendPerUser =
         totalUsers > 0 ? totalSpending / totalUsers : 0
 
@@ -49,7 +63,9 @@ export function useAnalytics(isAdmin: boolean) {
       expenses?.forEach((e) => {
         const cat = e.category ?? 'other'
         if (!categoryMap[cat]) categoryMap[cat] = { total: 0, count: 0 }
-        categoryMap[cat].total += e.amount ?? 0
+        const amount =
+          typeof e.amount === 'string' ? Number(e.amount) : (e.amount ?? 0)
+        categoryMap[cat].total += amount
         categoryMap[cat].count += 1
       })
 
@@ -68,8 +84,16 @@ export function useAnalytics(isAdmin: boolean) {
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
       const recentActivity =
-        expenses?.filter((e) => new Date(e.created_at) > sevenDaysAgo).length ??
-        0
+        expenses?.filter((e) => {
+          const createdAt =
+            'created_at' in e && typeof e.created_at === 'string'
+              ? e.created_at
+              : null
+          const expenseDate =
+            'date' in e && typeof e.date === 'string' ? e.date : null
+          const raw = createdAt ?? expenseDate
+          return raw ? new Date(raw) > sevenDaysAgo : false
+        }).length ?? 0
 
       setAnalytics({
         totalUsers,
